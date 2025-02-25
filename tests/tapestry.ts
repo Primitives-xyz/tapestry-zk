@@ -28,8 +28,6 @@ import "dotenv/config";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { assetSchemaV1, metadataSchemaV1 } from "../src";
 import { freezeDelegateSchemaV1, stakeRecordSchemaV1 } from "../src/schemas";
-import { Stake } from "../target/types/stake";
-import stakeIdl from "../target/idl/stake.json";
 
 const { PublicKey } = anchor.web3;
 
@@ -58,20 +56,6 @@ describe("tapestry", () => {
       // new Connection(process.env.MAINNET_RPC as string, {
       //   commitment: "confirmed",
       // }),
-      new Connection("http://localhost:8899", {
-        commitment: "confirmed",
-      }),
-      new anchor.Wallet(keypair),
-      {
-        commitment: "confirmed",
-      }
-    )
-  );
-
-  const stakeProgram = new Program<Stake>(
-    stakeIdl as any,
-    "stk3g78wHcLTHgAqedaaxpqAvaDDRkxFj4qY4ew3CG4",
-    new anchor.AnchorProvider(
       new Connection("http://localhost:8899", {
         commitment: "confirmed",
       }),
