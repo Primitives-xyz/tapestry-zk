@@ -27,7 +27,7 @@ import * as borsh from "borsh";
 
 import "dotenv/config";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
-import { assetSchemaV1, metadataSchemaV1 } from "../src";
+import { assetSchemaV1, metadataSchemaV1, nodeSchemaV1 } from "../src";
 
 const { PublicKey } = anchor.web3;
 
@@ -187,30 +187,6 @@ describe("tapestry", () => {
       remainingAccounts.map((a) => a.toBase58())
     );
 
-    // Add more detailed logging for debugging
-    console.log(
-      "Proof Merkle Trees:",
-      proof.merkleTrees.map((pk) => pk.toBase58())
-    );
-    console.log(
-      "Proof Nullifier Queues:",
-      proof.nullifierQueues.map((pk) => pk.toBase58())
-    );
-
-    // Log the first few bytes of the proof for comparison
-    console.log(
-      "Proof A (first 10 bytes):",
-      Array.from(proof.compressedProof.a.slice(0, 10))
-    );
-    console.log(
-      "Proof B (first 10 bytes):",
-      Array.from(proof.compressedProof.b.slice(0, 10))
-    );
-    console.log(
-      "Proof C (first 10 bytes):",
-      Array.from(proof.compressedProof.c.slice(0, 10))
-    );
-
     const {
       accountCompressionAuthority,
       noopProgram,
@@ -340,31 +316,63 @@ describe("tapestry", () => {
 
     const newlyCreatedAsset = assets.items.find((asset) => {
       try {
-        const decoded: any = borsh.deserialize(assetSchemaV1, asset.data.data);
-        console.log("Decoded asset:", decoded);
+        // Try to deserialize as a node first
+        const decoded: any = borsh.deserialize(nodeSchemaV1, asset.data.data);
+        console.log("Decoded node:", decoded);
 
         const owner = new PublicKey(Uint8Array.from(decoded.owner)).toBase58();
-        console.log("Asset owner:", owner);
+        console.log("Node owner:", owner);
         console.log("Expected owner:", keypairOther.publicKey.toBase58());
 
         const isFound = owner === keypairOther.publicKey.toBase58();
         if (isFound) {
-          console.log("Found asset:", {
+          console.log("Found node:", {
             ...decoded,
             owner,
             updateAuthority: new PublicKey(
               Uint8Array.from(decoded.updateAuthority)
             ).toBase58(),
-            collectionInfo: {
-              assetId: new PublicKey(Uint8Array.from(asset.address)).toBase58(),
-              updateAuthority: keypairOther.publicKey.toBase58(),
-            },
+            label: decoded.label,
+            properties: decoded.properties,
+            isMutable: decoded.isMutable,
+            creators: decoded.creators.map((c: any) => ({
+              address: new PublicKey(Uint8Array.from(c.address)).toBase58(),
+              verified: c.verified,
+              share: c.share,
+            })),
           });
         }
         return isFound;
       } catch (error) {
-        console.error("Error decoding asset:", error);
-        return false;
+        // If node deserialization fails, try as an asset
+        try {
+          const decoded: any = borsh.deserialize(
+            assetSchemaV1,
+            asset.data.data
+          );
+          console.log("Decoded asset:", decoded);
+
+          const owner = new PublicKey(
+            Uint8Array.from(decoded.owner)
+          ).toBase58();
+          console.log("Asset owner:", owner);
+          console.log("Expected owner:", keypairOther.publicKey.toBase58());
+
+          const isFound = owner === keypairOther.publicKey.toBase58();
+          if (isFound) {
+            console.log("Found asset:", {
+              ...decoded,
+              owner,
+              updateAuthority: new PublicKey(
+                Uint8Array.from(decoded.updateAuthority)
+              ).toBase58(),
+            });
+          }
+          return isFound;
+        } catch (innerError) {
+          console.error("Error decoding asset:", innerError);
+          return false;
+        }
       }
     });
 

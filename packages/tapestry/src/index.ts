@@ -10,4 +10,10 @@ export {
   metadataSchemaV1,
   stakeRecordSchemaV1,
   freezeDelegateSchemaV1,
+  nodeSchemaV1,
+  edgeSchemaV1,
+  nodeArgsSchema,
+  edgeArgsSchema,
+  propertiesSchema,
+  creatorSchema,
 } from "./schemas";
