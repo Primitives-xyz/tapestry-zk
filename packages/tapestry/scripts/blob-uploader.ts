@@ -1,5 +1,5 @@
 import { Program } from "@coral-xyz/anchor";
-import { ZkNft } from "../target/types/tapestry";
+import { Tapestry } from "../target/types/tapestry";
 import {
   ComputeBudgetProgram,
   Keypair,
@@ -12,6 +12,15 @@ import {
 } from "@lightprotocol/stateless.js";
 import { chunk } from "lodash";
 
+// Define custom program type with the missing methods
+interface TapestryWithBlobMethods extends Program<Tapestry> {
+  methods: Program<Tapestry>["methods"] & {
+    initBlobUpload(blobLength: number): any;
+    uploadBlob(index: number, part: Buffer): any;
+    logBlob(): any;
+  };
+}
+
 const PART_LENGTH = 920;
 const TRANSACTION_CHUNK_SIZE = 10;
 const UPLOADED_BLOB_BUFFER_START =
@@ -19,18 +28,18 @@ const UPLOADED_BLOB_BUFFER_START =
   32; // authority
 
 export class BlobUploader {
-  private readonly program: Program<ZkNft>;
+  private readonly program: TapestryWithBlobMethods;
   private readonly blob: Buffer;
   private readonly keypair: Keypair;
   private readonly skipPreflight: boolean;
 
   constructor(
-    program: Program<ZkNft>,
+    program: Program<Tapestry>,
     keypair: Keypair,
     blob: Buffer,
     skipPreflight: boolean = false
   ) {
-    this.program = program;
+    this.program = program as TapestryWithBlobMethods;
     this.blob = blob;
     this.keypair = keypair;
     this.skipPreflight = skipPreflight;

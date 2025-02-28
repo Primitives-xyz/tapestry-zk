@@ -1,5 +1,4 @@
-import idl from "../target/idl/zk_nft.json";
-import stakeIdl from "../target/idl/stake.json";
+import idl from "../target/idl/tapestry.json";
 
 // main program
 export type { Tapestry } from "../target/types/tapestry";
@@ -12,7 +11,3 @@ export {
   stakeRecordSchemaV1,
   freezeDelegateSchemaV1,
 } from "./schemas";
-
-export type { Stake } from "../target/types/stake";
-export { stakeIdl };
-export const STAKE_PROGRAM_ID = "stk3g78wHcLTHgAqedaaxpqAvaDDRkxFj4qY4ew3CG4";

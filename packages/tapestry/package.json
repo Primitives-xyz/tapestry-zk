@@ -10,16 +10,17 @@
     "build:rust": "cargo build --release",
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "start:local": "light test-validator --indexer-db-url=postgres://photon:password@localhost:5432/photon",
-    "airdrop:local": "solana airdrop 1000 CuKKajwy7Md7141rgyjKee98YrkkNf2z994o6vCJysEr -u http://localhost:8899",
-    "deploy:local": "anchor deploy --program-name tapestry --provider.cluster http://localhost:8899  --program-keypair target/deploy/program-keypair.json  --provider.wallet target/deploy/authority-keypair.json",
+    "start:local": "light test-validator ",
+    "airdrop:local": "solana airdrop 1000 NAMEPoWfnM4c1F9EoXcUgsQPwXZiy6pYpnTPM71aDwj -u http://localhost:8899",
+    "deploy:local": "anchor deploy --program-name tapestry --provider.cluster http://localhost:8899  --program-keypair target/deploy/GraphU.json  --provider.wallet target/deploy/name.json",
     "extend": "solana program extend GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh 19000 -u $MAINNET_RPC -k target/deploy/authority-keypair.json",
     "extend:local": "solana program extend GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh 30000 -u http://localhost:8899 -k target/deploy/authority-keypair.json",
     "write-buffer": "solana program write-buffer --with-compute-unit-price 1000 target/deploy/tapestry.so -u $MAINNET_RPC -k target/deploy/authority-keypair.json --buffer buffer.json --max-sign-attempts 1000 --use-rpc",
     "deploy": "solana program deploy --with-compute-unit-price 1000 -u $MAINNET_RPC -k target/deploy/authority-keypair.json --buffer buffer.json --program-id target/deploy/program-keypair.json",
     "test": "anchor test --skip-deploy --skip-local-validator --skip-build --provider.wallet target/deploy/authority-keypair.json",
     "close-buffers": "solana program close --buffers -u $MAINNET_RPC -k target/deploy/authority-keypair.json",
-    "idl": "anchor idl upgrade -f target/idl/tapestry.json GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh --provider.wallet target/deploy/authority-keypair.json --provider.cluster $MAINNET_RPC"
+    "idl:init": "anchor idl init -f target/idl/tapestry.json GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh --provider.wallet target/deploy/keypair.json --provider.cluster https://devnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83",
+    "idl": "anchor idl upgrade -f target/idl/tapestry.json GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh --provider.wallet target/deploy/keypair.json --provider.cluster https://devnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.29.0",

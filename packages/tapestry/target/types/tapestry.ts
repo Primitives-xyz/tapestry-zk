@@ -1,0 +1,789 @@
+export type Tapestry = {
+  "version": "0.1.0",
+  "name": "tapestry",
+  "instructions": [
+    {
+      "name": "createNode",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "updateAuthority",
+          "isMut": false,
+          "isSigner": true,
+          "isOptional": true
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "cpiAuthorityPda",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "selfProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "lightSystemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "accountCompressionProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "registeredProgramPda",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "noopProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "accountCompressionAuthority",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "proof",
+          "type": {
+            "defined": "AnchorCompressedProof"
+          }
+        },
+        {
+          "name": "addressMerkleTreeRootIndex",
+          "type": "u16"
+        },
+        {
+          "name": "randomBytes",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "nodeArgs",
+          "type": {
+            "defined": "NodeArgs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createEdge",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "updateAuthority",
+          "isMut": false,
+          "isSigner": true,
+          "isOptional": true
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "cpiAuthorityPda",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "selfProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "lightSystemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "accountCompressionProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "registeredProgramPda",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "noopProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "accountCompressionAuthority",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "proof",
+          "type": {
+            "defined": "AnchorCompressedProof"
+          }
+        },
+        {
+          "name": "addressMerkleTreeRootIndex",
+          "type": "u16"
+        },
+        {
+          "name": "randomBytes",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "edgeArgs",
+          "type": {
+            "defined": "EdgeArgs"
+          }
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "AnchorCompressedProof",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "a",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "b",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          },
+          {
+            "name": "c",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EdgeArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sourceNode",
+            "docs": [
+              "The source node of the edge"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "targetNode",
+            "docs": [
+              "The target node of the edge"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "edgeType",
+            "docs": [
+              "The type of relationship this edge represents"
+            ],
+            "type": "string"
+          },
+          {
+            "name": "properties",
+            "docs": [
+              "Properties of the edge"
+            ],
+            "type": {
+              "vec": {
+                "defined": "Properties"
+              }
+            }
+          },
+          {
+            "name": "isMutable",
+            "docs": [
+              "Whether or not the edge is mutable"
+            ],
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Creator",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "address",
+            "type": "publicKey"
+          },
+          {
+            "name": "verified",
+            "type": "bool"
+          },
+          {
+            "name": "share",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NodeArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "label",
+            "docs": [
+              "The label of the node"
+            ],
+            "type": "string"
+          },
+          {
+            "name": "properties",
+            "type": {
+              "vec": {
+                "defined": "Properties"
+              }
+            }
+          },
+          {
+            "name": "isMutable",
+            "type": "bool"
+          },
+          {
+            "name": "creators",
+            "type": {
+              "vec": {
+                "defined": "Creator"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Properties",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": "string"
+          },
+          {
+            "name": "value",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "GroupMaxSizeExceeded",
+      "msg": "GroupMaxSizeExceeded"
+    },
+    {
+      "code": 6001,
+      "name": "GroupAuthorityOrDelegateMismatch",
+      "msg": "GroupAuthorityOrDelegateMismatch"
+    },
+    {
+      "code": 6002,
+      "name": "AssetNotMutable",
+      "msg": "AssetNotMutable"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidAuthority",
+      "msg": "Authority is not the owner or delegate"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidMerkleTrees",
+      "msg": "Invalid merkle trees"
+    },
+    {
+      "code": 6005,
+      "name": "PluginAlreadySet",
+      "msg": "Plugin is already set"
+    },
+    {
+      "code": 6006,
+      "name": "TransferDelegatePluginNotEnabled",
+      "msg": "Transfer delegate plugin is not enabled on this asset"
+    },
+    {
+      "code": 6007,
+      "name": "AssetIsFrozen",
+      "msg": "Asset is frozen"
+    },
+    {
+      "code": 6008,
+      "name": "FreezeDelegateNotProvided",
+      "msg": "Freeze delegate is not provided"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidPluginIndex",
+      "msg": "Invalid plugin index provided"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidPluginsToInitialize",
+      "msg": "Invalid plugins to initialize"
+    }
+  ]
+};
+
+export const IDL: Tapestry = {
+  "version": "0.1.0",
+  "name": "tapestry",
+  "instructions": [
+    {
+      "name": "createNode",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "updateAuthority",
+          "isMut": false,
+          "isSigner": true,
+          "isOptional": true
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "cpiAuthorityPda",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "selfProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "lightSystemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "accountCompressionProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "registeredProgramPda",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "noopProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "accountCompressionAuthority",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "proof",
+          "type": {
+            "defined": "AnchorCompressedProof"
+          }
+        },
+        {
+          "name": "addressMerkleTreeRootIndex",
+          "type": "u16"
+        },
+        {
+          "name": "randomBytes",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "nodeArgs",
+          "type": {
+            "defined": "NodeArgs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "createEdge",
+      "accounts": [
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "updateAuthority",
+          "isMut": false,
+          "isSigner": true,
+          "isOptional": true
+        },
+        {
+          "name": "owner",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "cpiAuthorityPda",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "selfProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "lightSystemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "accountCompressionProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "registeredProgramPda",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "noopProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "accountCompressionAuthority",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "proof",
+          "type": {
+            "defined": "AnchorCompressedProof"
+          }
+        },
+        {
+          "name": "addressMerkleTreeRootIndex",
+          "type": "u16"
+        },
+        {
+          "name": "randomBytes",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "edgeArgs",
+          "type": {
+            "defined": "EdgeArgs"
+          }
+        }
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "AnchorCompressedProof",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "a",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "b",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          },
+          {
+            "name": "c",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EdgeArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sourceNode",
+            "docs": [
+              "The source node of the edge"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "targetNode",
+            "docs": [
+              "The target node of the edge"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "edgeType",
+            "docs": [
+              "The type of relationship this edge represents"
+            ],
+            "type": "string"
+          },
+          {
+            "name": "properties",
+            "docs": [
+              "Properties of the edge"
+            ],
+            "type": {
+              "vec": {
+                "defined": "Properties"
+              }
+            }
+          },
+          {
+            "name": "isMutable",
+            "docs": [
+              "Whether or not the edge is mutable"
+            ],
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Creator",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "address",
+            "type": "publicKey"
+          },
+          {
+            "name": "verified",
+            "type": "bool"
+          },
+          {
+            "name": "share",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NodeArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "label",
+            "docs": [
+              "The label of the node"
+            ],
+            "type": "string"
+          },
+          {
+            "name": "properties",
+            "type": {
+              "vec": {
+                "defined": "Properties"
+              }
+            }
+          },
+          {
+            "name": "isMutable",
+            "type": "bool"
+          },
+          {
+            "name": "creators",
+            "type": {
+              "vec": {
+                "defined": "Creator"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Properties",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": "string"
+          },
+          {
+            "name": "value",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "GroupMaxSizeExceeded",
+      "msg": "GroupMaxSizeExceeded"
+    },
+    {
+      "code": 6001,
+      "name": "GroupAuthorityOrDelegateMismatch",
+      "msg": "GroupAuthorityOrDelegateMismatch"
+    },
+    {
+      "code": 6002,
+      "name": "AssetNotMutable",
+      "msg": "AssetNotMutable"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidAuthority",
+      "msg": "Authority is not the owner or delegate"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidMerkleTrees",
+      "msg": "Invalid merkle trees"
+    },
+    {
+      "code": 6005,
+      "name": "PluginAlreadySet",
+      "msg": "Plugin is already set"
+    },
+    {
+      "code": 6006,
+      "name": "TransferDelegatePluginNotEnabled",
+      "msg": "Transfer delegate plugin is not enabled on this asset"
+    },
+    {
+      "code": 6007,
+      "name": "AssetIsFrozen",
+      "msg": "Asset is frozen"
+    },
+    {
+      "code": 6008,
+      "name": "FreezeDelegateNotProvided",
+      "msg": "Freeze delegate is not provided"
+    },
+    {
+      "code": 6009,
+      "name": "InvalidPluginIndex",
+      "msg": "Invalid plugin index provided"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidPluginsToInitialize",
+      "msg": "Invalid plugins to initialize"
+    }
+  ]
+};

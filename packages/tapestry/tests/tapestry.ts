@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { ZkNft } from "../target/types/tapestry";
+import { Tapestry } from "../target/types/tapestry";
 import {
   CompressedAccountWithMerkleContext,
   LightSystemProgram,
@@ -19,7 +19,7 @@ import {
   sendAndConfirmTx,
 } from "@lightprotocol/stateless.js";
 import fs from "fs";
-import { expect } from "chai";
+import { expect, test, describe, it } from "bun:test";
 import { Connection, Keypair, SendTransactionError } from "@solana/web3.js";
 import idl from "../target/idl/tapestry.json";
 import * as borsh from "borsh";
@@ -27,15 +27,17 @@ import * as borsh from "borsh";
 import "dotenv/config";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { assetSchemaV1, metadataSchemaV1 } from "../src";
-import { freezeDelegateSchemaV1, stakeRecordSchemaV1 } from "../src/schemas";
+
+console.log("Starting test file execution");
 
 const { PublicKey } = anchor.web3;
 
 const keypair = anchor.web3.Keypair.fromSecretKey(
   Uint8Array.from(
-    JSON.parse(fs.readFileSync("target/deploy/authority-keypair.json", "utf-8"))
+    JSON.parse(fs.readFileSync("target/deploy/name.json", "utf-8"))
   )
 );
+console.log("Loaded keypair from file");
 
 const setComputeUnitLimitIx =
   anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
@@ -47,8 +49,11 @@ const setComputeUnitPriceIx =
   });
 
 describe("tapestry", () => {
+  console.log("Starting tapestry test suite");
+
   // Configure the client to use the local cluster.
-  const program = new Program<ZkNft>(
+  console.log("Creating program instance");
+  const program = new Program<Tapestry>(
     idl as any,
     // "zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh",
     "GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh",
@@ -65,7 +70,12 @@ describe("tapestry", () => {
       }
     )
   );
+  console.log("Program instance created");
 
+  console.log(
+    "Creating RPC connection: ",
+    program.provider.connection.rpcEndpoint
+  );
   const connection: Rpc = createRpc(
     program.provider.connection.rpcEndpoint,
     // program.provider.connection.rpcEndpoint,
@@ -75,10 +85,14 @@ describe("tapestry", () => {
       commitment: "confirmed",
     }
   );
+  console.log("RPC connection created");
 
   it.skip("Can create compressed account", async () => {
+    console.log("Starting 'Can create compressed account' test");
     const seed = Keypair.generate().publicKey.toBytes();
+    console.log("Generated seed");
 
+    console.log("About to call createAccount");
     const txSig = await createAccount(
       connection,
       keypair,
@@ -88,6 +102,7 @@ describe("tapestry", () => {
       undefined,
       undefined
     );
+    console.log("createAccount completed");
 
     console.log("Your transaction signature", txSig);
   });
@@ -143,13 +158,23 @@ describe("tapestry", () => {
   const METADATA_URI =
     METADATA_URIS[Math.floor(Math.random() * METADATA_URIS.length)];
   it("Can create asset", async () => {
+    console.log("Starting 'Can create asset' test");
+    console.log("Getting defaultTestStateTreeAccounts");
     const addressTree = defaultTestStateTreeAccounts().addressTree;
     const addressQueue = defaultTestStateTreeAccounts().addressQueue;
+    console.log("Got addressTree and addressQueue");
+
+    console.log("Generating assetSeed");
     const assetSeed = await hashToBn254FieldSizeBe(
       Buffer.from([1, ...program.programId.toBytes(), ...randomBytes])
     );
-    const assetAddress = await deriveAddress(assetSeed[0], addressTree);
+    console.log("Generated assetSeed");
 
+    console.log("Deriving assetAddress");
+    const assetAddress = await deriveAddress(assetSeed[0], addressTree);
+    console.log("Derived assetAddress:", assetAddress.toBase58());
+
+    console.log("Generating metadataSeed");
     const metadataSeed = await hashToBn254FieldSizeBe(
       Buffer.from([
         2,
@@ -157,8 +182,19 @@ describe("tapestry", () => {
         ...assetAddress.toBytes(),
       ])
     );
-    const metadataAddress = await deriveAddress(metadataSeed[0], addressTree);
+    console.log("Generated metadataSeed");
 
+    console.log("Deriving metadataAddress");
+    const metadataAddress = await deriveAddress(metadataSeed[0], addressTree);
+    console.log("Derived metadataAddress:", metadataAddress.toBase58());
+
+    console.log("About to call getValidityProofV0");
+
+    console.log({
+      compressionApiEndpoint: connection.compressionApiEndpoint,
+      rpcEndpoint: connection.rpcEndpoint,
+      provider: connection.proverEndpoint,
+    });
     const proof = await connection.getValidityProofV0(undefined, [
       {
         address: bn(assetAddress.toBytes()),
@@ -171,6 +207,7 @@ describe("tapestry", () => {
         queue: addressQueue,
       },
     ]);
+    console.log("Got validity proof");
 
     const newAddressParams: NewAddressParams = {
       seed: assetSeed[0],
@@ -203,7 +240,7 @@ describe("tapestry", () => {
     } = defaultStaticAccountsStruct();
 
     const ix = await program.methods
-      .createAsset(
+      .createNode(
         {
           a: proof.compressedProof.a,
           b: proof.compressedProof.b,
@@ -211,11 +248,11 @@ describe("tapestry", () => {
         },
         newAddressParamsPacked[0].addressMerkleTreeRootIndex,
         Array.from(randomBytes),
-        0,
         {
-          offChain: {
-            0: METADATA_URI,
-          },
+          label: "",
+          properties: [],
+          isMutable: false,
+          creators: [],
         }
       )
       .accounts({
@@ -333,990 +370,4 @@ describe("tapestry", () => {
   });
 
   const recipient2 = Keypair.generate();
-  it("can transfer asset", async () => {
-    const assets = await connection.getCompressedAccountsByOwner(
-      program.programId,
-      {
-        filters: [
-          {
-            memcmp: {
-              bytes: bs58.encode([1]),
-              offset: 0,
-            },
-          },
-          {
-            memcmp: {
-              bytes: recipient.publicKey.toBase58(),
-              offset: 1,
-            },
-          },
-        ],
-      }
-    );
-
-    const addressTree = defaultTestStateTreeAccounts().addressTree;
-    const addressQueue = defaultTestStateTreeAccounts().addressQueue;
-    const merkleTree = defaultTestStateTreeAccounts().merkleTree;
-    const nullifierQueue = defaultTestStateTreeAccounts().nullifierQueue;
-
-    const asset = assets.items[0];
-    const assetProof = await connection.getValidityProofV0(
-      [
-        {
-          hash: bn(Uint8Array.from(asset.hash)),
-          tree: addressTree,
-          queue: addressQueue,
-        },
-      ],
-      undefined
-    );
-
-    const inputCompressedAccount: CompressedAccountWithMerkleContext = {
-      merkleTree,
-      nullifierQueue,
-      hash: asset.hash,
-      leafIndex: asset.leafIndex,
-      readOnly: false,
-      owner: asset.owner,
-      lamports: asset.lamports,
-      address: asset.address,
-      data: asset.data,
-    };
-
-    const { packedInputCompressedAccounts, remainingAccounts } =
-      packCompressedAccounts(
-        [inputCompressedAccount],
-        assetProof.rootIndices,
-        []
-      );
-
-    const decodedAsset: any = borsh.deserialize(assetSchemaV1, asset.data.data);
-    const {
-      accountCompressionAuthority,
-      noopProgram,
-      registeredProgramPda,
-      accountCompressionProgram,
-    } = defaultStaticAccountsStruct();
-    const ix = await program.methods
-      .transfer(
-        {
-          a: assetProof.compressedProof.a,
-          b: assetProof.compressedProof.b,
-          c: assetProof.compressedProof.c,
-        },
-        null,
-        {
-          leafIndex: asset.leafIndex,
-          merkleTreePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .merkleTreePubkeyIndex,
-          nullifierQueuePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .nullifierQueuePubkeyIndex,
-          queueIndex: packedInputCompressedAccounts[0].merkleContext.queueIndex,
-        },
-        packedInputCompressedAccounts[0].rootIndex,
-        asset.address,
-        {
-          initializedPlugins: decodedAsset.initializedPlugins,
-          owner: recipient.publicKey,
-        }
-      )
-      .accounts({
-        payer: keypair.publicKey,
-        authority: recipient.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-        updateAuthority: updateAuthority.publicKey,
-        cpiAuthorityPda: PublicKey.findProgramAddressSync(
-          [Buffer.from("cpi_authority")],
-          program.programId
-        )[0],
-        accountCompressionAuthority,
-        accountCompressionProgram,
-        noopProgram,
-        registeredProgramPda,
-        selfProgram: program.programId,
-        lightSystemProgram: LightSystemProgram.programId,
-        recipient: recipient2.publicKey,
-        freezeDelegate: null,
-      })
-      .remainingAccounts(
-        remainingAccounts.map((account) => ({
-          pubkey: account,
-          isSigner: false,
-          isWritable: true,
-        }))
-      )
-      .instruction();
-
-    const blockhash = await connection.getLatestBlockhash();
-    // const lookupTable = (
-    //   await connection.getAddressLookupTable(LOOKUP_TABLE_ADDRESS)
-    // ).value;
-    const tx = buildAndSignTx(
-      [setComputeUnitLimitIx, setComputeUnitPriceIx, ix],
-      keypair,
-      blockhash.blockhash,
-      [recipient]
-      // [lookupTable]
-    );
-
-    console.log("txSize:", tx.serialize().byteLength);
-
-    const signature = await sendAndConfirmTx(connection, tx, {
-      commitment: "confirmed",
-    });
-
-    console.log("Your transaction signature", signature);
-
-    const transferredAssets = await connection.getCompressedAccountsByOwner(
-      program.programId,
-      {
-        filters: [
-          {
-            memcmp: {
-              bytes: recipient2.publicKey.toBase58(),
-              offset: 1,
-            },
-          },
-        ],
-      }
-    );
-
-    const transferredAsset = transferredAssets.items.find((asset) => {
-      const decoded: any = borsh.deserialize(assetSchemaV1, asset.data.data);
-      const owner = new PublicKey(Uint8Array.from(decoded.owner)).toBase58();
-      const isFound = owner === recipient2.publicKey.toBase58();
-
-      if (isFound) {
-        console.log("asset:", {
-          ...decoded,
-          owner,
-          updateAuthority: new PublicKey(
-            Uint8Array.from(decoded.updateAuthority)
-          ).toBase58(),
-          collectionInfo: {
-            assetId: new PublicKey(Uint8Array.from(asset.address)).toBase58(),
-            updateAuthority: updateAuthority.publicKey.toBase58(),
-          },
-        });
-      }
-
-      return isFound;
-    });
-
-    expect(transferredAsset).to.not.be.undefined;
-  });
-
-  const freezeDelegate = Keypair.generate();
-  it("can add freeze delegate plugin", async () => {
-    const assets = await connection.getCompressedAccountsByOwner(
-      program.programId,
-      {
-        filters: [
-          {
-            memcmp: {
-              bytes: bs58.encode([1]),
-              offset: 0,
-            },
-          },
-          {
-            memcmp: {
-              bytes: recipient2.publicKey.toBase58(),
-              offset: 1,
-            },
-          },
-        ],
-      }
-    );
-
-    const addressTree = defaultTestStateTreeAccounts().addressTree;
-    const addressQueue = defaultTestStateTreeAccounts().addressQueue;
-    const merkleTree = defaultTestStateTreeAccounts().merkleTree;
-    const nullifierQueue = defaultTestStateTreeAccounts().nullifierQueue;
-
-    const asset = assets.items[0];
-    const decodedAsset: any = borsh.deserialize(assetSchemaV1, asset.data.data);
-    const freezeDelegateSeed = await hashToBn254FieldSizeBe(
-      Buffer.from([
-        4,
-        ...program.programId.toBytes(),
-        ...Uint8Array.from(asset.address),
-      ])
-    );
-    const freezeDelegateAddress = await deriveAddress(
-      freezeDelegateSeed[0],
-      addressTree
-    );
-    const assetProof = await connection.getValidityProofV0([
-      {
-        hash: bn(Uint8Array.from(asset.hash)),
-        tree: addressTree,
-        queue: addressQueue,
-      },
-    ]);
-
-    const pluginProof = await connection.getValidityProofV0(undefined, [
-      {
-        address: bn(Uint8Array.from(freezeDelegateAddress.toBytes())),
-        tree: addressTree,
-        queue: addressQueue,
-      },
-    ]);
-
-    const newAddressParams: NewAddressParams = {
-      seed: freezeDelegateSeed[0],
-      addressMerkleTreeRootIndex: pluginProof.rootIndices[0],
-      addressMerkleTreePubkey: addressTree,
-      addressQueuePubkey: pluginProof.nullifierQueues[0],
-    };
-
-    const inputCompressedAccount: CompressedAccountWithMerkleContext = {
-      merkleTree,
-      nullifierQueue,
-      hash: asset.hash,
-      leafIndex: asset.leafIndex,
-      readOnly: false,
-      owner: asset.owner,
-      lamports: asset.lamports,
-      address: asset.address,
-      data: asset.data,
-    };
-    const outputCompressedAccounts =
-      LightSystemProgram.createNewAddressOutputState(
-        Array.from(freezeDelegateAddress.toBytes()),
-        program.programId
-      );
-    const {
-      packedInputCompressedAccounts,
-      remainingAccounts: _remainingAccounts,
-    } = packCompressedAccounts(
-      [inputCompressedAccount],
-      assetProof.rootIndices,
-      outputCompressedAccounts
-    );
-    const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
-      [newAddressParams],
-      _remainingAccounts
-    );
-
-    const {
-      accountCompressionAuthority,
-      noopProgram,
-      registeredProgramPda,
-      accountCompressionProgram,
-    } = defaultStaticAccountsStruct();
-
-    const ix = await program.methods
-      .addPlugin(
-        {
-          a: assetProof.compressedProof.a,
-          b: assetProof.compressedProof.b,
-          c: assetProof.compressedProof.c,
-        },
-        {
-          a: pluginProof.compressedProof.a,
-          b: pluginProof.compressedProof.b,
-          c: pluginProof.compressedProof.c,
-        },
-        {
-          uninitializedAddress: {
-            "0": newAddressParamsPacked[0].addressMerkleTreeRootIndex,
-          },
-        },
-        {
-          merkleTreePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .merkleTreePubkeyIndex,
-          nullifierQueuePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .nullifierQueuePubkeyIndex,
-        },
-        {
-          addressMerkleTreePubkeyIndex:
-            newAddressParamsPacked[0].addressMerkleTreeAccountIndex,
-          addressQueuePubkeyIndex:
-            newAddressParamsPacked[0].addressQueueAccountIndex,
-        },
-        packedInputCompressedAccounts[0].rootIndex,
-        asset.leafIndex,
-        0,
-        {
-          assetId: asset.address,
-          initializedPlugins: decodedAsset.initializedPlugins,
-          key: decodedAsset.key,
-        },
-        {
-          freezeDelegateV1: {
-            0: freezeDelegate.publicKey,
-          },
-        }
-      )
-      .accounts({
-        payer: keypair.publicKey,
-        updateAuthority: new PublicKey(
-          Uint8Array.from(decodedAsset.updateAuthority)
-        ),
-        owner: recipient2.publicKey,
-        cpiAuthorityPda: PublicKey.findProgramAddressSync(
-          [Buffer.from("cpi_authority")],
-          program.programId
-        )[0],
-        selfProgram: program.programId,
-        accountCompressionAuthority,
-        accountCompressionProgram,
-        noopProgram,
-        registeredProgramPda,
-        lightSystemProgram: LightSystemProgram.programId,
-      })
-      .remainingAccounts(
-        remainingAccounts.map((account) => ({
-          pubkey: account,
-          isSigner: false,
-          isWritable: true,
-        }))
-      )
-      .instruction();
-
-    const blockhash = await connection.getLatestBlockhash();
-    const tx = buildAndSignTx(
-      [setComputeUnitLimitIx, ix],
-      keypair,
-      blockhash.blockhash,
-      [recipient2]
-    );
-
-    const signature = await sendAndConfirmTx(connection, tx, {
-      commitment: "confirmed",
-    });
-
-    console.log("Your transaction signature for add plugin", signature);
-
-    const updatedAsset = await connection.getCompressedAccount(
-      bn(Uint8Array.from(asset.address))
-    );
-    const decodedUpdatedAsset: any = borsh.deserialize(
-      assetSchemaV1,
-      updatedAsset.data.data
-    );
-    expect(decodedUpdatedAsset.initializedPlugins.toString(2)).to.deep.equal(
-      "10"
-    );
-
-    const freezeDelegatePlugin = await connection.getCompressedAccount(
-      bn(Uint8Array.from(freezeDelegateAddress.toBytes()))
-    );
-
-    const decodedFreezeDelegatePlugin: any = borsh.deserialize(
-      freezeDelegateSchemaV1,
-      freezeDelegatePlugin.data.data
-    );
-    const freezeAuthority = new PublicKey(
-      Uint8Array.from(decodedFreezeDelegatePlugin.authority)
-    ).toBase58();
-
-    console.log("decodedFreezeDelegatePlugin:", {
-      ...decodedFreezeDelegatePlugin,
-      authority: freezeAuthority,
-    });
-    expect(freezeAuthority).to.deep.equal(freezeDelegate.publicKey.toBase58());
-  });
-
-  it("cannot transfer frozen asset", async () => {
-    const assets = await connection.getCompressedAccountsByOwner(
-      program.programId,
-      {
-        filters: [
-          {
-            memcmp: {
-              bytes: bs58.encode([1]),
-              offset: 0,
-            },
-          },
-          {
-            memcmp: {
-              bytes: recipient2.publicKey.toBase58(),
-              offset: 1,
-            },
-          },
-        ],
-      }
-    );
-
-    const addressTree = defaultTestStateTreeAccounts().addressTree;
-    const addressQueue = defaultTestStateTreeAccounts().addressQueue;
-    const merkleTree = defaultTestStateTreeAccounts().merkleTree;
-    const nullifierQueue = defaultTestStateTreeAccounts().nullifierQueue;
-
-    const asset = assets.items[0];
-    const assetProof = await connection.getValidityProofV0(
-      [
-        {
-          hash: bn(Uint8Array.from(asset.hash)),
-          tree: addressTree,
-          queue: addressQueue,
-        },
-      ],
-      undefined
-    );
-
-    const freezeDelegateSeed = await hashToBn254FieldSizeBe(
-      Buffer.from([
-        4,
-        ...program.programId.toBytes(),
-        ...Uint8Array.from(asset.address),
-      ])
-    );
-    const freezeDelegateAddress = await deriveAddress(
-      freezeDelegateSeed[0],
-      addressTree
-    );
-
-    const inputCompressedAccount: CompressedAccountWithMerkleContext = {
-      merkleTree,
-      nullifierQueue,
-      hash: asset.hash,
-      leafIndex: asset.leafIndex,
-      readOnly: false,
-      owner: asset.owner,
-      lamports: asset.lamports,
-      address: asset.address,
-      data: asset.data,
-    };
-
-    const { packedInputCompressedAccounts, remainingAccounts } =
-      packCompressedAccounts(
-        [inputCompressedAccount],
-        assetProof.rootIndices,
-        []
-      );
-
-    const decodedAsset: any = borsh.deserialize(assetSchemaV1, asset.data.data);
-    const {
-      accountCompressionAuthority,
-      noopProgram,
-      registeredProgramPda,
-      accountCompressionProgram,
-    } = defaultStaticAccountsStruct();
-    const ix = await program.methods
-      .transfer(
-        {
-          a: assetProof.compressedProof.a,
-          b: assetProof.compressedProof.b,
-          c: assetProof.compressedProof.c,
-        },
-        null,
-        {
-          leafIndex: asset.leafIndex,
-          merkleTreePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .merkleTreePubkeyIndex,
-          nullifierQueuePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .nullifierQueuePubkeyIndex,
-          queueIndex: packedInputCompressedAccounts[0].merkleContext.queueIndex,
-        },
-        packedInputCompressedAccounts[0].rootIndex,
-        asset.address,
-        {
-          initializedPlugins: decodedAsset.initializedPlugins,
-          owner: new PublicKey(Uint8Array.from(decodedAsset.owner)),
-        }
-      )
-      .accounts({
-        payer: keypair.publicKey,
-        authority: recipient2.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-        updateAuthority: updateAuthority.publicKey,
-        cpiAuthorityPda: PublicKey.findProgramAddressSync(
-          [Buffer.from("cpi_authority")],
-          program.programId
-        )[0],
-        accountCompressionAuthority,
-        accountCompressionProgram,
-        noopProgram,
-        registeredProgramPda,
-        selfProgram: program.programId,
-        lightSystemProgram: LightSystemProgram.programId,
-        recipient: recipient2.publicKey,
-        freezeDelegate: freezeDelegate.publicKey,
-      })
-      .remainingAccounts(
-        remainingAccounts.map((account) => ({
-          pubkey: account,
-          isSigner: false,
-          isWritable: true,
-        }))
-      )
-      .instruction();
-
-    const blockhash = await connection.getLatestBlockhash();
-    const tx = buildAndSignTx(
-      [setComputeUnitLimitIx, setComputeUnitPriceIx, ix],
-      keypair,
-      blockhash.blockhash,
-      [recipient2]
-    );
-
-    try {
-      await sendAndConfirmTx(connection, tx, {
-        commitment: "confirmed",
-      });
-      throw new Error();
-    } catch (e: unknown) {
-      const error = e as SendTransactionError;
-      expect(error.logs.join("")).to.include(
-        "Error Number: 6007. Error Message: Asset is frozen."
-      );
-    }
-
-    // attempt to forge asset data
-    const ix2 = await program.methods
-      .transfer(
-        {
-          a: assetProof.compressedProof.a,
-          b: assetProof.compressedProof.b,
-          c: assetProof.compressedProof.c,
-        },
-        null,
-        {
-          leafIndex: asset.leafIndex,
-          merkleTreePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .merkleTreePubkeyIndex,
-          nullifierQueuePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .nullifierQueuePubkeyIndex,
-          queueIndex: packedInputCompressedAccounts[0].merkleContext.queueIndex,
-        },
-        packedInputCompressedAccounts[0].rootIndex,
-        asset.address,
-        {
-          initializedPlugins: 0, // set that the freeze delegate plugin is removed
-          owner: new PublicKey(Uint8Array.from(decodedAsset.owner)),
-        }
-      )
-      .accounts({
-        payer: keypair.publicKey,
-        authority: recipient2.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
-        updateAuthority: updateAuthority.publicKey,
-        cpiAuthorityPda: PublicKey.findProgramAddressSync(
-          [Buffer.from("cpi_authority")],
-          program.programId
-        )[0],
-        accountCompressionAuthority,
-        accountCompressionProgram,
-        noopProgram,
-        registeredProgramPda,
-        selfProgram: program.programId,
-        lightSystemProgram: LightSystemProgram.programId,
-        recipient: recipient2.publicKey,
-        freezeDelegate: freezeDelegate.publicKey,
-      })
-      .remainingAccounts(
-        remainingAccounts.map((account) => ({
-          pubkey: account,
-          isSigner: false,
-          isWritable: true,
-        }))
-      )
-      .instruction();
-
-    const tx2 = buildAndSignTx(
-      [setComputeUnitLimitIx, setComputeUnitPriceIx, ix2],
-      keypair,
-      blockhash.blockhash,
-      [recipient2]
-    );
-
-    try {
-      await sendAndConfirmTx(connection, tx2, {
-        commitment: "confirmed",
-      });
-      throw new Error();
-    } catch (e: unknown) {
-      const error = e as SendTransactionError;
-      expect(error.logs.join("")).to.include("custom program error: 0x32ce");
-    }
-  });
-
-  it("can remove freeze delegate plugin", async () => {
-    const assets = await connection.getCompressedAccountsByOwner(
-      program.programId,
-      {
-        filters: [
-          {
-            memcmp: {
-              bytes: bs58.encode([1]),
-              offset: 0,
-            },
-          },
-          {
-            memcmp: {
-              bytes: recipient2.publicKey.toBase58(),
-              offset: 1,
-            },
-          },
-        ],
-      }
-    );
-
-    const addressTree = defaultTestStateTreeAccounts().addressTree;
-    const addressQueue = defaultTestStateTreeAccounts().addressQueue;
-    const merkleTree = defaultTestStateTreeAccounts().merkleTree;
-    const nullifierQueue = defaultTestStateTreeAccounts().nullifierQueue;
-
-    const asset = assets.items[0];
-    const freezeDelegateSeed = await hashToBn254FieldSizeBe(
-      Buffer.from([
-        4,
-        ...program.programId.toBytes(),
-        ...Uint8Array.from(asset.address),
-      ])
-    );
-    const freezeDelegateAddress = await deriveAddress(
-      freezeDelegateSeed[0],
-      addressTree
-    );
-
-    const freezeDelegateAccount = await connection.getCompressedAccount(
-      bn(Uint8Array.from(freezeDelegateAddress.toBytes()))
-    );
-
-    const assetProof = await connection.getValidityProofV0([
-      {
-        hash: bn(Uint8Array.from(freezeDelegateAccount.hash)),
-        tree: addressTree,
-        queue: addressQueue,
-      },
-      {
-        hash: bn(Uint8Array.from(asset.hash)),
-        tree: addressTree,
-        queue: addressQueue,
-      },
-    ]);
-
-    const inputCompressedAccount: CompressedAccountWithMerkleContext = {
-      merkleTree,
-      nullifierQueue,
-      hash: asset.hash,
-      leafIndex: asset.leafIndex,
-      readOnly: false,
-      owner: asset.owner,
-      lamports: asset.lamports,
-      address: asset.address,
-      data: asset.data,
-    };
-
-    const { packedInputCompressedAccounts, remainingAccounts } =
-      packCompressedAccounts(
-        [inputCompressedAccount],
-        assetProof.rootIndices,
-        []
-      );
-    const decodedAsset: any = borsh.deserialize(assetSchemaV1, asset.data.data);
-    const {
-      accountCompressionAuthority,
-      noopProgram,
-      registeredProgramPda,
-      accountCompressionProgram,
-    } = defaultStaticAccountsStruct();
-
-    const ix = await program.methods
-      .removePlugin(
-        {
-          a: assetProof.compressedProof.a,
-          b: assetProof.compressedProof.b,
-          c: assetProof.compressedProof.c,
-        },
-        {
-          merkleTreePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .merkleTreePubkeyIndex,
-          nullifierQueuePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .nullifierQueuePubkeyIndex,
-        },
-        assetProof.rootIndices[0],
-        asset.leafIndex,
-        freezeDelegateAccount.leafIndex,
-        asset.address,
-        1,
-        decodedAsset.initializedPlugins
-      )
-      .accounts({
-        payer: keypair.publicKey,
-        updateAuthority: updateAuthority.publicKey,
-        owner: recipient2.publicKey,
-        freezeDelegate: freezeDelegate.publicKey,
-        cpiAuthorityPda: PublicKey.findProgramAddressSync(
-          [Buffer.from("cpi_authority")],
-          program.programId
-        )[0],
-        accountCompressionAuthority,
-        accountCompressionProgram,
-        noopProgram,
-        registeredProgramPda,
-        selfProgram: program.programId,
-        lightSystemProgram: LightSystemProgram.programId,
-      })
-      .remainingAccounts(
-        remainingAccounts.map((account) => ({
-          pubkey: account,
-          isSigner: false,
-          isWritable: true,
-        }))
-      )
-      .instruction();
-
-    const blockhash = await connection.getLatestBlockhash();
-    const tx = buildAndSignTx(
-      [setComputeUnitLimitIx, ix],
-      keypair,
-      blockhash.blockhash,
-      [freezeDelegate]
-    );
-
-    const signature = await sendAndConfirmTx(connection, tx, {
-      commitment: "confirmed",
-    });
-
-    console.log("Your transaction signature for remove plugin", signature);
-
-    const updatedAsset = await connection.getCompressedAccount(
-      bn(Uint8Array.from(asset.address))
-    );
-    const decodedUpdatedAsset: any = borsh.deserialize(
-      assetSchemaV1,
-      updatedAsset.data.data
-    );
-    expect(decodedUpdatedAsset.initializedPlugins.toString(2)).to.deep.equal(
-      "0"
-    );
-  });
-
-  const freezeDelegate2 = Keypair.generate();
-  it("can add freeze delegate plugin again", async () => {
-    const assets = await connection.getCompressedAccountsByOwner(
-      program.programId,
-      {
-        filters: [
-          {
-            memcmp: {
-              bytes: bs58.encode([1]),
-              offset: 0,
-            },
-          },
-          {
-            memcmp: {
-              bytes: recipient2.publicKey.toBase58(),
-              offset: 1,
-            },
-          },
-        ],
-      }
-    );
-
-    const addressTree = defaultTestStateTreeAccounts().addressTree;
-    const addressQueue = defaultTestStateTreeAccounts().addressQueue;
-    const merkleTree = defaultTestStateTreeAccounts().merkleTree;
-    const nullifierQueue = defaultTestStateTreeAccounts().nullifierQueue;
-
-    const asset = assets.items[0];
-    const decodedAsset: any = borsh.deserialize(assetSchemaV1, asset.data.data);
-    const freezeDelegateSeed = await hashToBn254FieldSizeBe(
-      Buffer.from([
-        4,
-        ...program.programId.toBytes(),
-        ...Uint8Array.from(asset.address),
-      ])
-    );
-    const freezeDelegateAddress = await deriveAddress(
-      freezeDelegateSeed[0],
-      addressTree
-    );
-
-    const freezeDelegateAccount = await connection.getCompressedAccount(
-      bn(Uint8Array.from(freezeDelegateAddress.toBytes()))
-    );
-
-    const assetProof = await connection.getValidityProofV0([
-      {
-        hash: bn(Uint8Array.from(asset.hash)),
-        tree: addressTree,
-        queue: addressQueue,
-      },
-    ]);
-
-    const pluginProof = await connection.getValidityProofV0([
-      {
-        hash: bn(Uint8Array.from(freezeDelegateAccount.hash)),
-        tree: addressTree,
-        queue: addressQueue,
-      },
-    ]);
-
-    const newAddressParams: NewAddressParams = {
-      seed: freezeDelegateSeed[0],
-      addressMerkleTreeRootIndex: pluginProof.rootIndices[0],
-      addressMerkleTreePubkey: addressTree,
-      addressQueuePubkey: pluginProof.nullifierQueues[0],
-    };
-
-    const inputCompressedAccount: CompressedAccountWithMerkleContext = {
-      merkleTree,
-      nullifierQueue,
-      hash: asset.hash,
-      leafIndex: asset.leafIndex,
-      readOnly: false,
-      owner: asset.owner,
-      lamports: asset.lamports,
-      address: asset.address,
-      data: asset.data,
-    };
-    const outputCompressedAccounts =
-      LightSystemProgram.createNewAddressOutputState(
-        Array.from(freezeDelegateAddress.toBytes()),
-        program.programId
-      );
-    const {
-      packedInputCompressedAccounts,
-      remainingAccounts: _remainingAccounts,
-    } = packCompressedAccounts(
-      [inputCompressedAccount],
-      assetProof.rootIndices,
-      outputCompressedAccounts
-    );
-    const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
-      [newAddressParams],
-      _remainingAccounts
-    );
-
-    const {
-      accountCompressionAuthority,
-      noopProgram,
-      registeredProgramPda,
-      accountCompressionProgram,
-    } = defaultStaticAccountsStruct();
-
-    const ix = await program.methods
-      .addPlugin(
-        {
-          a: assetProof.compressedProof.a,
-          b: assetProof.compressedProof.b,
-          c: assetProof.compressedProof.c,
-        },
-        {
-          a: pluginProof.compressedProof.a,
-          b: pluginProof.compressedProof.b,
-          c: pluginProof.compressedProof.c,
-        },
-        {
-          initializedAddress: {
-            "0": Buffer.from(
-              Uint8Array.from(
-                freezeDelegateAccount.data.dataHash.slice().reverse()
-              )
-            ),
-          },
-        },
-        {
-          merkleTreePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .merkleTreePubkeyIndex,
-          nullifierQueuePubkeyIndex:
-            packedInputCompressedAccounts[0].merkleContext
-              .nullifierQueuePubkeyIndex,
-        },
-        {
-          addressMerkleTreePubkeyIndex:
-            newAddressParamsPacked[0].addressMerkleTreeAccountIndex,
-          addressQueuePubkeyIndex:
-            newAddressParamsPacked[0].addressQueueAccountIndex,
-        },
-        packedInputCompressedAccounts[0].rootIndex,
-        asset.leafIndex,
-        freezeDelegateAccount.leafIndex,
-        {
-          assetId: asset.address,
-          initializedPlugins: decodedAsset.initializedPlugins,
-          key: decodedAsset.key,
-        },
-        {
-          freezeDelegateV1: {
-            0: freezeDelegate2.publicKey,
-          },
-        }
-      )
-      .accounts({
-        payer: keypair.publicKey,
-        updateAuthority: new PublicKey(
-          Uint8Array.from(decodedAsset.updateAuthority)
-        ),
-        owner: recipient2.publicKey,
-        cpiAuthorityPda: PublicKey.findProgramAddressSync(
-          [Buffer.from("cpi_authority")],
-          program.programId
-        )[0],
-        selfProgram: program.programId,
-        accountCompressionAuthority,
-        accountCompressionProgram,
-        noopProgram,
-        registeredProgramPda,
-        lightSystemProgram: LightSystemProgram.programId,
-      })
-      .remainingAccounts(
-        remainingAccounts.map((account) => ({
-          pubkey: account,
-          isSigner: false,
-          isWritable: true,
-        }))
-      )
-      .instruction();
-
-    const blockhash = await connection.getLatestBlockhash();
-    const tx = buildAndSignTx(
-      [setComputeUnitLimitIx, ix],
-      keypair,
-      blockhash.blockhash,
-      [recipient2]
-    );
-
-    const signature = await sendAndConfirmTx(connection, tx, {
-      commitment: "confirmed",
-      skipPreflight: true,
-    });
-
-    console.log("Your transaction signature", signature);
-
-    const updatedAsset = await connection.getCompressedAccount(
-      bn(Uint8Array.from(asset.address))
-    );
-    const decodedUpdatedAsset: any = borsh.deserialize(
-      assetSchemaV1,
-      updatedAsset.data.data
-    );
-    expect(decodedUpdatedAsset.initializedPlugins.toString(2)).to.deep.equal(
-      "10"
-    );
-
-    const freezeDelegatePlugin = await connection.getCompressedAccount(
-      bn(Uint8Array.from(freezeDelegateAddress.toBytes()))
-    );
-
-    const decodedFreezeDelegatePlugin: any = borsh.deserialize(
-      freezeDelegateSchemaV1,
-      freezeDelegatePlugin.data.data
-    );
-    const freezeAuthority = new PublicKey(
-      Uint8Array.from(decodedFreezeDelegatePlugin.authority)
-    ).toBase58();
-
-    console.log("decodedFreezeDelegatePlugin:", {
-      ...decodedFreezeDelegatePlugin,
-      authority: freezeAuthority,
-    });
-    expect(freezeAuthority).to.deep.equal(freezeDelegate2.publicKey.toBase58());
-  });
 });

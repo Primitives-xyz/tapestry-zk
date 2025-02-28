@@ -5,7 +5,6 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-stake = "stk3g78wHcLTHgAqedaaxpqAvaDDRkxFj4qY4ew3CG4"
 tapestry = "GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh"
 
 [registry]

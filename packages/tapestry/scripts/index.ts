@@ -1,7 +1,7 @@
 import { Program } from "@coral-xyz/anchor";
 import * as idl from "../target/idl/tapestry.json";
 import * as anchor from "@coral-xyz/anchor";
-import { ZkNft } from "../target/types/tapestry";
+import { Tapestry } from "../target/types/tapestry";
 import metadatas from "./collection/formatted-metadata.json";
 import fs from "fs";
 import { BlobUploader } from "./blob-uploader";
@@ -18,7 +18,7 @@ const keypair = anchor.web3.Keypair.fromSecretKey(
 );
 
 const program = new Program(
-  idl as unknown as ZkNft,
+  idl as unknown as Tapestry,
   "GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh",
   {
     // connection: new anchor.web3.Connection("http://localhost:8899"),

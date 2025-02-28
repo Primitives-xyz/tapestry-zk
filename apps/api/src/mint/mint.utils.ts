@@ -96,8 +96,7 @@ export const createMintRecordAddress = async ({
       )
     ) {
       throw new HTTPException(409, {
-        message:
-          "Wallet has already minted a zkNFT.",
+        message: "Wallet has already minted a zkNFT.",
       });
     }
 
@@ -193,7 +192,7 @@ export const buildMintTx = async ({
     const metadataUri = `https://files.tinys.pl/${updateAuthority.publicKey.toBase58()}/${nftId}.json`;
 
     const mintIx = await program.methods
-      .createAsset(
+      .createNode(
         {
           a: proof.compressedProof.a,
           b: proof.compressedProof.b,
@@ -201,11 +200,11 @@ export const buildMintTx = async ({
         },
         newAddressParamsPacked[0].addressMerkleTreeRootIndex,
         Array.from(randomBytes),
-        0,
         {
-          offChain: {
-            0: metadataUri,
-          },
+          label: "",
+          properties: [],
+          isMutable: false,
+          creators: [],
         }
       )
       .accounts({
@@ -263,8 +262,7 @@ export const buildMintTx = async ({
       )
     ) {
       throw new HTTPException(409, {
-        message:
-          "Wallet has already minted a zkNFT.",
+        message: "Wallet has already minted a zkNFT.",
       });
     }
 
