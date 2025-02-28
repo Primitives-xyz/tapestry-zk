@@ -1,48 +1,28 @@
 {
-  "name": "@tapestry/program",
-  "version": "0.0.1",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
+  "name": "tapestry",
+  "private": true,
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts",
-    "build:program": "CARGO_FEATURE_NO_NEON=true anchor build",
-    "build:rust": "cargo build --release",
-    "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
-    "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
-    "start:local": "light test-validator --indexer-db-url=postgres://photon:password@localhost:5432/photon",
-    "airdrop:local": "solana airdrop 1000 CuKKajwy7Md7141rgyjKee98YrkkNf2z994o6vCJysEr -u http://localhost:8899",
-    "deploy:local": "anchor deploy --program-name tapestry --provider.cluster http://localhost:8899  --program-keypair target/deploy/program-keypair.json  --provider.wallet target/deploy/authority-keypair.json",
-    "extend": "solana program extend GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh 19000 -u $MAINNET_RPC -k target/deploy/authority-keypair.json",
-    "extend:local": "solana program extend GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh 30000 -u http://localhost:8899 -k target/deploy/authority-keypair.json",
-    "write-buffer": "solana program write-buffer --with-compute-unit-price 1000 target/deploy/tapestry.so -u $MAINNET_RPC -k target/deploy/authority-keypair.json --buffer buffer.json --max-sign-attempts 1000 --use-rpc",
-    "deploy": "solana program deploy --with-compute-unit-price 1000 -u $MAINNET_RPC -k target/deploy/authority-keypair.json --buffer buffer.json --program-id target/deploy/program-keypair.json",
-    "test": "anchor test --skip-deploy --skip-local-validator --skip-build --provider.wallet target/deploy/authority-keypair.json",
-    "close-buffers": "solana program close --buffers -u $MAINNET_RPC -k target/deploy/authority-keypair.json",
-    "idl": "anchor idl upgrade -f target/idl/tapestry.json GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh --provider.wallet target/deploy/authority-keypair.json --provider.cluster $MAINNET_RPC"
-  },
-  "dependencies": {
-    "@coral-xyz/anchor": "0.29.0",
-    "@solana/web3.js": "^1.94.0",
-    "borsh": "^2.0.0",
-    "dotenv": "^16.4.5"
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "dev:api": "turbo dev --filter=api",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "devDependencies": {
-    "@lightprotocol/stateless.js": "^0.13.0",
-    "@noble/hashes": "^1.4.0",
-    "@types/bn.js": "^5.1.0",
-    "@types/chai": "^4.3.0",
-    "@types/lodash": "^4.17.6",
-    "@types/mocha": "^9.0.0",
-    "@types/node": "^20",
-    "bs58": "^6.0.0",
-    "chai": "^4.3.4",
-    "lodash": "^4.17.21",
-    "mocha": "^9.0.3",
-    "prettier": "^2.6.2",
-    "ts-mocha": "^10.0.0",
-    "ts-node": "^10.9.2",
-    "tsup": "^8.1.0",
-    "typescript": "^4.3.5"
+    "prettier": "^3.2.5",
+    "turbo": "^2.0.5",
+    "typescript": "^5.4.5"
+  },
+  "packageManager": "pnpm@9.4.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "volta": {
+    "pnpm": "9.12.2",
+    "node": "20.18.0"
+  },
+  "dependencies": {
+    "drizzle-kit": "^0.26.2",
+    "drizzle-orm": "^0.35.1"
   }
 }
