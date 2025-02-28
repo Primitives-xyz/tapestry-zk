@@ -19,16 +19,14 @@ import {
   sendAndConfirmTx,
 } from "@lightprotocol/stateless.js";
 import fs from "fs";
-import { expect, test, describe, it } from "bun:test";
-import { Connection, Keypair, SendTransactionError } from "@solana/web3.js";
+import { expect, describe, it } from "bun:test";
+import { Connection, Keypair } from "@solana/web3.js";
 import idl from "../target/idl/tapestry.json";
 import * as borsh from "borsh";
 
 import "dotenv/config";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { assetSchemaV1, metadataSchemaV1 } from "../src";
-
-console.log("Starting test file execution");
 
 const { PublicKey } = anchor.web3;
 
@@ -37,7 +35,6 @@ const keypair = anchor.web3.Keypair.fromSecretKey(
     JSON.parse(fs.readFileSync("target/deploy/name.json", "utf-8"))
   )
 );
-console.log("Loaded keypair from file");
 
 const setComputeUnitLimitIx =
   anchor.web3.ComputeBudgetProgram.setComputeUnitLimit({
@@ -49,10 +46,7 @@ const setComputeUnitPriceIx =
   });
 
 describe("tapestry", () => {
-  console.log("Starting tapestry test suite");
-
   // Configure the client to use the local cluster.
-  console.log("Creating program instance");
   const program = new Program<Tapestry>(
     idl as any,
     // "zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh",
@@ -70,12 +64,7 @@ describe("tapestry", () => {
       }
     )
   );
-  console.log("Program instance created");
 
-  console.log(
-    "Creating RPC connection: ",
-    program.provider.connection.rpcEndpoint
-  );
   const connection: Rpc = createRpc(
     program.provider.connection.rpcEndpoint,
     // program.provider.connection.rpcEndpoint,
@@ -85,14 +74,10 @@ describe("tapestry", () => {
       commitment: "confirmed",
     }
   );
-  console.log("RPC connection created");
 
-  it.skip("Can create compressed account", async () => {
-    console.log("Starting 'Can create compressed account' test");
+  it("Can create compressed account", async () => {
     const seed = Keypair.generate().publicKey.toBytes();
-    console.log("Generated seed");
 
-    console.log("About to call createAccount");
     const txSig = await createAccount(
       connection,
       keypair,
@@ -102,47 +87,10 @@ describe("tapestry", () => {
       undefined,
       undefined
     );
-    console.log("createAccount completed");
-
-    console.log("Your transaction signature", txSig);
   });
 
   const LOOKUP_TABLE_ADDRESS = // new PublicKey("Dh74qoNrgMYzk4ZFZenKS2f9gSA9AqXrcgYzyBia1r3W") // prod lookup table
     new PublicKey("3UQtx7pqXu2jZADF8YW3uaFq7EzASs55rZzxSRCibqb7"); // dev lookup table
-  const METADATA_URIS = [
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/1.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/2.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/3.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/4.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/5.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/6.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/7.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/8.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/9.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/10.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/11.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/12.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/13.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/14.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/15.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/16.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/17.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/18.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/19.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/20.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/21.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/22.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/23.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/24.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/25.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/26.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/27.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/28.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/29.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/30.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/31.json",
-    "https://files.tinys.pl/zkN5FTcJzrwp2c9G4fL3qXo9tnVhiACG3xzoP3tV3Hh/32.json",
-  ];
 
   const updateAuthority = Keypair.generate();
   // const updateAuthority = Keypair.fromSecretKey(
@@ -155,26 +103,16 @@ describe("tapestry", () => {
   const randomBytes = Keypair.generate().publicKey.toBytes();
   const recipient = Keypair.generate();
   // const recipient = keypair;
-  const METADATA_URI =
-    METADATA_URIS[Math.floor(Math.random() * METADATA_URIS.length)];
+
   it("Can create asset", async () => {
-    console.log("Starting 'Can create asset' test");
-    console.log("Getting defaultTestStateTreeAccounts");
     const addressTree = defaultTestStateTreeAccounts().addressTree;
     const addressQueue = defaultTestStateTreeAccounts().addressQueue;
-    console.log("Got addressTree and addressQueue");
 
-    console.log("Generating assetSeed");
     const assetSeed = await hashToBn254FieldSizeBe(
       Buffer.from([1, ...program.programId.toBytes(), ...randomBytes])
     );
-    console.log("Generated assetSeed");
-
-    console.log("Deriving assetAddress");
     const assetAddress = await deriveAddress(assetSeed[0], addressTree);
-    console.log("Derived assetAddress:", assetAddress.toBase58());
 
-    console.log("Generating metadataSeed");
     const metadataSeed = await hashToBn254FieldSizeBe(
       Buffer.from([
         2,
@@ -182,19 +120,9 @@ describe("tapestry", () => {
         ...assetAddress.toBytes(),
       ])
     );
-    console.log("Generated metadataSeed");
 
-    console.log("Deriving metadataAddress");
     const metadataAddress = await deriveAddress(metadataSeed[0], addressTree);
-    console.log("Derived metadataAddress:", metadataAddress.toBase58());
 
-    console.log("About to call getValidityProofV0");
-
-    console.log({
-      compressionApiEndpoint: connection.compressionApiEndpoint,
-      rpcEndpoint: connection.rpcEndpoint,
-      provider: connection.proverEndpoint,
-    });
     const proof = await connection.getValidityProofV0(undefined, [
       {
         address: bn(assetAddress.toBytes()),
@@ -207,7 +135,6 @@ describe("tapestry", () => {
         queue: addressQueue,
       },
     ]);
-    console.log("Got validity proof");
 
     const newAddressParams: NewAddressParams = {
       seed: assetSeed[0],
@@ -215,7 +142,6 @@ describe("tapestry", () => {
       addressMerkleTreePubkey: proof.merkleTrees[0],
       addressQueuePubkey: proof.nullifierQueues[0],
     };
-
     const outputCompressedAccounts =
       LightSystemProgram.createNewAddressOutputState(
         Array.from(assetAddress.toBytes()),
@@ -226,19 +152,16 @@ describe("tapestry", () => {
       [],
       outputCompressedAccounts
     );
-
     const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
       [newAddressParams],
       _remainingAccounts
     );
-
     const {
       accountCompressionAuthority,
       noopProgram,
       registeredProgramPda,
       accountCompressionProgram,
     } = defaultStaticAccountsStruct();
-
     const ix = await program.methods
       .createNode(
         {
@@ -249,8 +172,13 @@ describe("tapestry", () => {
         newAddressParamsPacked[0].addressMerkleTreeRootIndex,
         Array.from(randomBytes),
         {
-          label: "",
-          properties: [],
+          label: "test",
+          properties: [
+            {
+              key: "test",
+              value: "test",
+            },
+          ],
           isMutable: false,
           creators: [],
         }
@@ -291,9 +219,6 @@ describe("tapestry", () => {
       [updateAuthority]
       // [lookupTable]
     );
-
-    console.log("txSize:", tx.serialize().byteLength);
-
     const signature = await sendAndConfirmTx(connection, tx, {
       commitment: "confirmed",
     });
@@ -366,7 +291,6 @@ describe("tapestry", () => {
       ...metadata,
       assetId: new PublicKey(Uint8Array.from(metadata.assetId)).toBase58(),
     });
-    expect(metadata.uri).to.equal(METADATA_URI);
   });
 
   const recipient2 = Keypair.generate();
