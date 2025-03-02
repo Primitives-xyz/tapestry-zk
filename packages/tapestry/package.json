@@ -29,7 +29,7 @@
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
-    "@lightprotocol/stateless.js": "^0.13.0",
+    "@lightprotocol/stateless.js": "^0.20.9",
     "@noble/hashes": "^1.4.0",
     "@types/bn.js": "^5.1.0",
     "@types/chai": "^4.3.0",
