@@ -91,7 +91,7 @@ describe("tapestry", () => {
     const proof = await rpc.getValidityProofV0(undefined, [
       {
         address: bn(assetAddress.toBytes()),
-        tree: addressTree,
+        tree: defaultTestStateTreeAccounts().merkleTree,
         queue: addressQueue,
       },
     ]);
@@ -157,7 +157,7 @@ describe("tapestry", () => {
           b: proof.compressedProof.b,
           c: proof.compressedProof.c,
         },
-        newAddressParamsPacked[0].addressMerkleTreeRootIndex, // Use the exact root index from the proof
+        proof.rootIndices[0],
         Array.from(randomBytes),
         nodeArgs
       )
