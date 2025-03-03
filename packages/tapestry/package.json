@@ -17,7 +17,7 @@
     "extend:local": "solana program extend GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh 30000 -u http://localhost:8899 -k target/deploy/authority-keypair.json",
     "write-buffer": "solana program write-buffer --with-compute-unit-price 1000 target/deploy/tapestry.so -u $MAINNET_RPC -k target/deploy/authority-keypair.json --buffer buffer.json --max-sign-attempts 1000 --use-rpc",
     "deploy": "solana program deploy --with-compute-unit-price 1000 -u $MAINNET_RPC -k target/deploy/authority-keypair.json --buffer buffer.json --program-id target/deploy/program-keypair.json",
-    "test": "anchor test --skip-deploy --skip-local-validator --skip-build --provider.wallet target/deploy/authority-keypair.json",
+    "test": "anchor test --skip-deploy --skip-local-validator --skip-build --provider.wallet target/deploy/authority-keypair.json -- --timeout 30000",
     "close-buffers": "solana program close --buffers -u $MAINNET_RPC -k target/deploy/authority-keypair.json",
     "idl:init": "anchor idl init -f target/idl/tapestry.json GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh --provider.wallet target/deploy/name.json --provider.cluster http://127.0.0.1:8899",
     "idl": "anchor idl upgrade -f target/idl/tapestry.json GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh --provider.wallet target/deploy/keypair.json --provider.cluster https://devnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83"

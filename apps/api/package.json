@@ -9,7 +9,7 @@
     "@hono-rate-limiter/cloudflare": "^0.2.1",
     "@hono/zod-openapi": "^0.16.4",
     "@hono/zod-validator": "^0.4.1",
-    "@lightprotocol/stateless.js": "0.14.0",
+    "@lightprotocol/stateless.js": "^0.20.9",
     "@solana/web3.js": "^1.94.0",
     "@tapestry/program": "workspace:*",
     "borsh": "^2.0.0",
