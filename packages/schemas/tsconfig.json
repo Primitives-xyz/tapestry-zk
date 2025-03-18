@@ -1,7 +1,0 @@
-{
-  "extends": "@tapestry/typescript-config/base.json",
-  "exclude": ["node_modules"],
-  "compilerOptions": {
-    "types": ["node"]
-  }
-}

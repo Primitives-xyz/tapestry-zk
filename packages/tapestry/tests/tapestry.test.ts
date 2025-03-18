@@ -23,7 +23,7 @@ import * as borsh from "borsh";
 
 import "dotenv/config";
 import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
-import { nodeSchemaV1 } from "../src";
+import { nodeSchemaV1, PROGRAM_ID } from "../src";
 
 import { connection as rpc, PAYER_KEYPAIR, NAME_KEYPAIR } from "./common";
 
@@ -45,7 +45,7 @@ describe("tapestry", () => {
   // Configure the client to use the local cluster.
   const program = new Program<Tapestry>(
     idl as any,
-    "GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh",
+    PROGRAM_ID,
     new anchor.AnchorProvider(
       // new Connection(process.env.MAINNET_RPC as string, {
       //   commitment: "confirmed",
@@ -75,8 +75,10 @@ describe("tapestry", () => {
   it("Can create node", async () => {
     const addressTree = defaultTestStateTreeAccounts().addressTree;
     const addressQueue = defaultTestStateTreeAccounts().addressQueue;
-    const randomBytes = Keypair.generate().publicKey.toBytes();
+    const merkleTree = defaultTestStateTreeAccounts().merkleTree;
 
+    // Use constant randomBytes for debugging
+    const randomBytes = new Uint8Array(32).fill(1);
     const accountKeyNode = Uint8Array.from([0]);
 
     const assetSeed = deriveAddressSeed(
@@ -87,17 +89,15 @@ describe("tapestry", () => {
     const assetAddress = deriveAddress(assetSeed, addressTree);
 
     // Get a fresh proof for the node address
-    // Important: We need to make sure we're getting a proof for the latest state
     const proof = await rpc.getValidityProofV0(undefined, [
       {
         address: bn(assetAddress.toBytes()),
-        tree: defaultTestStateTreeAccounts().merkleTree,
+        tree: addressTree,
         queue: addressQueue,
       },
     ]);
 
     // Create the new address parameters
-    // Important: Make sure the root index matches exactly
     const newAddressParams: NewAddressParams = {
       seed: assetSeed,
       addressMerkleTreeRootIndex: proof.rootIndices[0],
@@ -116,15 +116,25 @@ describe("tapestry", () => {
       [],
       [],
       outputCompressedAccounts,
-      defaultTestStateTreeAccounts().merkleTree
+      merkleTree
     );
     const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
       [newAddressParams],
       _remainingAccounts
     );
 
+    // 5. new_address_params_packed
+    console.log("New Address Params:", {
+      packed: newAddressParamsPacked,
+      unpacked: {
+        seed: Buffer.from(newAddressParams.seed).toString("hex"),
+        rootIndex: newAddressParams.addressMerkleTreeRootIndex.toString(),
+        merkleTree: newAddressParams.addressMerkleTreePubkey.toBase58(),
+        queue: newAddressParams.addressQueuePubkey.toBase58(),
+      },
+    });
+
     // Create node arguments according to the IDL structure
-    // Important: Make sure this matches exactly what the program expects
     const nodeArgs = {
       label: "test-node",
       properties: [
@@ -149,7 +159,6 @@ describe("tapestry", () => {
     } = defaultStaticAccountsStruct();
 
     // Create the instruction with the correct parameters
-    // Important: Make sure the root index matches exactly what's in the proof
     const ix = await program.methods
       .createNode(
         {
@@ -157,7 +166,7 @@ describe("tapestry", () => {
           b: proof.compressedProof.b,
           c: proof.compressedProof.c,
         },
-        proof.rootIndices[0],
+        newAddressParamsPacked[0].addressMerkleTreeRootIndex,
         Array.from(randomBytes),
         nodeArgs
       )
@@ -186,19 +195,22 @@ describe("tapestry", () => {
       .instruction();
 
     const blockhash = await rpc.getLatestBlockhash();
-    // Build and sign the transaction with both keypairs
+
     const tx = buildAndSignTx(
       [setComputeUnitLimitIx, setComputeUnitPriceIx, ix],
       NAME_KEYPAIR,
       blockhash.blockhash
     );
 
-    const signature = await sendAndConfirmTx(rpc, tx, {
-      commitment: "confirmed",
-    });
-
-    console.log("Your transaction signature", signature);
-  }); // 30 second timeout just for this test
+    try {
+      const signature = await sendAndConfirmTx(rpc, tx, {
+        commitment: "confirmed",
+      });
+      console.log("Transaction signature:", signature);
+    } catch (error) {
+      throw Error(error);
+    }
+  });
 
   it.skip("can fetch nodes by owner", async () => {
     // Add a delay to allow the transaction to be processed

@@ -9,10 +9,7 @@ import { BlobUploader } from "./blob-uploader";
 const keypair = anchor.web3.Keypair.fromSecretKey(
   Uint8Array.from(
     JSON.parse(
-      fs.readFileSync(
-        __dirname + "/../target/deploy/authority-keypair.json",
-        "utf-8"
-      )
+      fs.readFileSync(__dirname + "/../../keys/provider-wallet.json", "utf-8")
     )
   )
 );

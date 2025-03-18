@@ -1,7 +1,7 @@
 solana program deploy target/deploy/tapestry.so \
-  --program-id target/deploy/GraphU.json \
-  --keypair target/deploy/keypair.json \
-  --fee-payer target/deploy/name.json \
+  --program-id ../../keys/GraphU.json \
+  --keypair ../../keys/provider-wallet.json \
+  --fee-payer ../../keys/provider-wallet.json \
   --with-compute-unit-price 1000 \
   --use-rpc \
   --max-sign-attempts 1000 \

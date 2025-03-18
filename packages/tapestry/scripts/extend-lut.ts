@@ -20,7 +20,7 @@ import fs from "fs";
 
 const keypair = Keypair.fromSecretKey(
   Uint8Array.from(
-    JSON.parse(fs.readFileSync("target/deploy/authority-keypair.json", "utf-8"))
+    JSON.parse(fs.readFileSync("../../keys/authority-keypair.json", "utf-8"))
   )
 );
 const connection = new Connection("http://localhost:8899", {

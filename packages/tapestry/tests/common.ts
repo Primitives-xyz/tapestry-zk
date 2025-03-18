@@ -6,13 +6,13 @@ import fs from "fs";
 // Load keypairs from files
 export const PAYER_KEYPAIR = anchor.web3.Keypair.fromSecretKey(
   Uint8Array.from(
-    JSON.parse(fs.readFileSync("target/deploy/keypair.json", "utf-8"))
+    JSON.parse(fs.readFileSync("../../keys/test/payer.json", "utf-8"))
   )
 );
 
 export const NAME_KEYPAIR = anchor.web3.Keypair.fromSecretKey(
   Uint8Array.from(
-    JSON.parse(fs.readFileSync("target/deploy/name.json", "utf-8"))
+    JSON.parse(fs.readFileSync("../../keys/provider-wallet.json", "utf-8"))
   )
 );
 
