@@ -17,9 +17,9 @@ export const NAME_KEYPAIR = anchor.web3.Keypair.fromSecretKey(
 );
 
 // Define RPC endpoint
-export const RPC_ENDPOINT = "http://localhost:8899";
-export const COMPRESS_RPC_ENDPOINT = "http://localhost:8784";
-export const PROVER_ENDPOINT = "http://localhost:3001";
+export const RPC_ENDPOINT = "http://127.0.0.1:8899";
+export const COMPRESS_RPC_ENDPOINT = "http://127.0.0.1:8784";
+export const PROVER_ENDPOINT = "http://127.0.0.1:3001";
 // Create connection
 export const connection = createRpc(
   RPC_ENDPOINT,
