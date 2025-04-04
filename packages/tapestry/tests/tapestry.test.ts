@@ -16,7 +16,7 @@ import {
   deriveAddressSeed,
 } from "@lightprotocol/stateless.js";
 //@ts-expect-error
-import { describe, it } from "bun:test";
+import { describe, it, expect } from "bun:test";
 import { Keypair, SendTransactionError } from "@solana/web3.js";
 import idl from "../target/idl/tapestry.json";
 import * as borsh from "borsh";
@@ -77,8 +77,9 @@ describe("tapestry", () => {
     const addressQueue = defaultTestStateTreeAccounts().addressQueue;
     const merkleTree = defaultTestStateTreeAccounts().merkleTree;
 
-    // Use constant randomBytes for debugging
-    const randomBytes = new Uint8Array(32).fill(1);
+    // Generate proper random bytes for node creation
+    const randomBytes = anchor.web3.Keypair.generate().secretKey.slice(0, 32);
+    // Create a more unique account key for the node
     const accountKeyNode = Uint8Array.from([0]);
 
     const assetSeed = deriveAddressSeed(
@@ -87,6 +88,8 @@ describe("tapestry", () => {
     );
 
     const assetAddress = deriveAddress(assetSeed, addressTree);
+
+    console.log("Asset Address:", assetAddress.toBase58());
 
     // Get a fresh proof for the node address
     const proof = await rpc.getValidityProofV0(undefined, [
@@ -122,17 +125,6 @@ describe("tapestry", () => {
       [newAddressParams],
       _remainingAccounts
     );
-
-    // 5. new_address_params_packed
-    console.log("New Address Params:", {
-      packed: newAddressParamsPacked,
-      unpacked: {
-        seed: Buffer.from(newAddressParams.seed).toString("hex"),
-        rootIndex: newAddressParams.addressMerkleTreeRootIndex.toString(),
-        merkleTree: newAddressParams.addressMerkleTreePubkey.toBase58(),
-        queue: newAddressParams.addressQueuePubkey.toBase58(),
-      },
-    });
 
     // Create node arguments according to the IDL structure
     const nodeArgs = {
@@ -207,6 +199,8 @@ describe("tapestry", () => {
         commitment: "confirmed",
       });
       console.log("Transaction signature:", signature);
+      console.log("Asset Address:", assetAddress.toBase58());
+      console.log("Owner:", keypairOther.publicKey.toBase58());
     } catch (error) {
       if (error instanceof SendTransactionError) {
         const logs = await error.getLogs(rpc);
@@ -217,7 +211,8 @@ describe("tapestry", () => {
   });
 
   it("can fetch nodes by owner", async () => {
-    // Add a delay to allow the transaction to be processed
+    // wait half a second
+    await new Promise((resolve) => setTimeout(resolve, 500));
     const nodes = await rpc.getCompressedAccountsByOwner(program.programId, {
       filters: [
         {
@@ -226,22 +221,16 @@ describe("tapestry", () => {
             offset: 0,
           },
         },
+        {
+          memcmp: {
+            bytes: keypairOther.publicKey.toBase58(),
+            offset: 1,
+          },
+        },
       ],
     });
 
-    const newlyCreatedNode = nodes.items.find((node) => {
-      try {
-        // Try to deserialize as a node
-        const decoded: any = borsh.deserialize(nodeSchemaV1, node.data.data);
-        const owner = new PublicKey(Uint8Array.from(decoded.owner)).toBase58();
-
-        const isFound = owner === keypairOther.publicKey.toBase58();
-
-        return isFound;
-      } catch (error) {
-        console.error("Error decoding node:", error);
-        return false;
-      }
-    });
+    // expect there to be at least one node
+    expect(nodes.items.length).toBeGreaterThan(0);
   });
 });
