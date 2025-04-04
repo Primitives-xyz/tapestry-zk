@@ -89,8 +89,6 @@ describe("tapestry", () => {
 
     const assetAddress = deriveAddress(assetSeed, addressTree);
 
-    console.log("Asset Address:", assetAddress.toBase58());
-
     // Get a fresh proof for the node address
     const proof = await rpc.getValidityProofV0(undefined, [
       {
