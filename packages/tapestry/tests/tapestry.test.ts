@@ -79,7 +79,6 @@ describe("tapestry", () => {
 
     // Generate proper random bytes for node creation
     const randomBytes = anchor.web3.Keypair.generate().secretKey.slice(0, 32);
-    // Create a more unique account key for the node
     const accountKeyNode = Uint8Array.from([0]);
 
     const assetSeed = deriveAddressSeed(
