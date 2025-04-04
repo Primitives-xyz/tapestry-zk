@@ -17,7 +17,7 @@ import {
 } from "@lightprotocol/stateless.js";
 //@ts-expect-error
 import { describe, it, expect } from "bun:test";
-import { Keypair, SendTransactionError } from "@solana/web3.js";
+import { Keypair, PublicKey, SendTransactionError } from "@solana/web3.js";
 import idl from "../target/idl/tapestry.json";
 import * as borsh from "borsh";
 
@@ -26,8 +26,6 @@ import { bs58 } from "@coral-xyz/anchor/dist/cjs/utils/bytes";
 import { nodeSchemaV1, PROGRAM_ID } from "../src";
 
 import { connection as rpc, PAYER_KEYPAIR, NAME_KEYPAIR } from "./common";
-
-const { PublicKey } = anchor.web3;
 
 // Using PAYER_KEYPAIR from common.ts instead of loading it again
 const keypairOther = PAYER_KEYPAIR;
@@ -40,6 +38,9 @@ const setComputeUnitPriceIx =
   anchor.web3.ComputeBudgetProgram.setComputeUnitPrice({
     microLamports: 1,
   });
+
+// Define asset address at a higher scope
+let assetAddress: PublicKey;
 
 describe("tapestry", () => {
   // Configure the client to use the local cluster.
@@ -86,7 +87,7 @@ describe("tapestry", () => {
       program.programId
     );
 
-    const assetAddress = deriveAddress(assetSeed, addressTree);
+    assetAddress = deriveAddress(assetSeed, addressTree);
 
     // Get a fresh proof for the node address
     const proof = await rpc.getValidityProofV0(undefined, [
@@ -227,7 +228,13 @@ describe("tapestry", () => {
       ],
     });
 
+    const nodes2 = await rpc.getCompressedAccount(bn(assetAddress.toBytes()));
+    console.log("Nodes2:", nodes2);
+
     // expect there to be at least one node
     expect(nodes.items.length).toBeGreaterThan(0);
+
+    // You can now use assetAddress here
+    console.log("Using asset address in fetch test:", assetAddress.toBase58());
   });
 });
