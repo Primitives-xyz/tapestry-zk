@@ -96,15 +96,26 @@ export const assetSchemaV1: borsh.Schema = {
   },
 };
 
+export const nodeDataSchema: borsh.Schema = {
+  struct: {
+    propertiesBytes: { array: { type: "u8" } },
+    creatorsBytes: { array: { type: "u8" } },
+  },
+};
+
 export const nodeSchemaV1: borsh.Schema = {
   struct: {
     key: accountKeySchema,
     owner: { array: { type: "u8", len: 32 } },
-    updateAuthority: { array: { type: "u8", len: 32 } },
+    updateAuthority: {
+      enum: [
+        { struct: { none: { struct: {} } } },
+        { struct: { address: { array: { type: "u8", len: 32 } } } },
+      ],
+    },
     label: "string",
-    properties: { array: { type: propertiesSchema } },
+    nodeData: nodeDataSchema,
     isMutable: "bool",
-    creators: { array: { type: creatorSchema } },
     initializedPlugins: "u16",
   },
 };
@@ -145,5 +156,48 @@ export const stakeRecordSchemaV1: borsh.Schema = {
     staker: { array: { type: "u8", len: 32 } },
     collectionId: { array: { type: "u8", len: 32 } },
     startTime: "i64",
+  },
+};
+
+// Create a very simplified version of the nodeSchema that handles the binary format directly
+// Without using custom enum types that are causing issues
+export const rawNodeSchema: borsh.Schema = {
+  struct: {
+    key: "u8", // AccountKey is a simple u8
+    owner: { array: { type: "u8", len: 32 } },
+    updateAuthorityTag: "u8", // Just the tag value (0 or 1)
+    // The update authority is serialized differently than a standard option
+    // It appears to be a raw value, not an optional field
+    updateAuthorityData: { array: { type: "u8", len: 32 } }, // This is always present, not optional
+    label: "string",
+    nodeData: {
+      struct: {
+        propertiesBytes: { array: { type: "u8" } },
+        creatorsBytes: { array: { type: "u8" } },
+      },
+    },
+    isMutable: "bool",
+    initializedPlugins: "u16",
+  },
+};
+
+// Create a schema based on the observed buffer layout from our debugging
+export const rawEdgeSchema: borsh.Schema = {
+  struct: {
+    key: "u8", // AccountKey (1 for EdgeV1)
+    sourceNode: { array: { type: "u8", len: 32 } }, // Full 32-byte source node Pubkey
+    targetNode: { array: { type: "u8", len: 32 } }, // Full 32-byte target node Pubkey
+    edgeType: "string", // Borsh handles u32 len + bytes
+    // Properties are serialized in the edgeData field
+    edgeData: {
+      struct: {
+        propertiesBytes: { array: { type: "u8" } }, // Not hashed, just serialized properties
+      },
+    },
+    isMutable: "bool",
+    owner: { array: { type: "u8", len: 32 } }, // Owner Pubkey
+    updateAuthorityTag: "u8", // UpdateAuthority enum tag
+    updateAuthorityData: { array: { type: "u8", len: 32 } }, // UpdateAuthority data
+    initializedPlugins: "u16",
   },
 };
