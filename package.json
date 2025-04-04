@@ -22,7 +22,7 @@
     "node": "20.18.0"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "^0.31.0",
+    "@coral-xyz/anchor": "^0.29.0",
     "@lightprotocol/stateless.js": "^0.20.9",
     "drizzle-kit": "^0.26.2",
     "drizzle-orm": "^0.35.1"

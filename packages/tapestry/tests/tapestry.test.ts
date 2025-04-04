@@ -17,7 +17,7 @@ import {
 } from "@lightprotocol/stateless.js";
 //@ts-expect-error
 import { describe, it } from "bun:test";
-import { Keypair } from "@solana/web3.js";
+import { Keypair, SendTransactionError } from "@solana/web3.js";
 import idl from "../target/idl/tapestry.json";
 import * as borsh from "borsh";
 
@@ -208,11 +208,15 @@ describe("tapestry", () => {
       });
       console.log("Transaction signature:", signature);
     } catch (error) {
+      if (error instanceof SendTransactionError) {
+        const logs = await error.getLogs(rpc);
+        console.error("Transaction failed with logs:", logs);
+      }
       throw Error(error);
     }
   });
 
-  it.skip("can fetch nodes by owner", async () => {
+  it("can fetch nodes by owner", async () => {
     // Add a delay to allow the transaction to be processed
     const nodes = await rpc.getCompressedAccountsByOwner(program.programId, {
       filters: [
