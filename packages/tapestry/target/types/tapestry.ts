@@ -389,6 +389,11 @@ export type Tapestry = {
       "code": 6010,
       "name": "InvalidPluginsToInitialize",
       "msg": "Invalid plugins to initialize"
+    },
+    {
+      "code": 6011,
+      "name": "SelfReferenceNotAllowed",
+      "msg": "Self-referencing edges are not allowed"
     }
   ]
 };
@@ -784,6 +789,11 @@ export const IDL: Tapestry = {
       "code": 6010,
       "name": "InvalidPluginsToInitialize",
       "msg": "Invalid plugins to initialize"
+    },
+    {
+      "code": 6011,
+      "name": "SelfReferenceNotAllowed",
+      "msg": "Self-referencing edges are not allowed"
     }
   ]
 };

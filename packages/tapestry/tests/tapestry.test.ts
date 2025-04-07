@@ -26,8 +26,7 @@ import {
   PROGRAM_ID,
   propertiesSchema,
   creatorSchema,
-  rawNodeSchema,
-  edgeSchemaV1,
+  rawNodeSchema as NodeSchemaV1,
   rawEdgeSchema,
 } from "../src";
 
@@ -49,6 +48,7 @@ const setComputeUnitPriceIx =
 let assetAddress: PublicKey;
 let edgeAddress: PublicKey;
 let secondNodeAddress: PublicKey; // For testing different source/target
+let differentEdgeAddress: PublicKey; // For testing different nodes edge
 
 describe("tapestry", () => {
   // Configure the client to use the local cluster.
@@ -362,7 +362,7 @@ describe("tapestry", () => {
     }
   });
 
-  it("Can create edge between the same node (self-reference)", async () => {
+  it("Cannot create edge between the same node (self-reference)", async () => {
     const addressTree = defaultTestStateTreeAccounts().addressTree;
     const addressQueue = defaultTestStateTreeAccounts().addressQueue;
     const merkleTree = defaultTestStateTreeAccounts().merkleTree;
@@ -413,7 +413,7 @@ describe("tapestry", () => {
       _remainingAccounts
     );
 
-    // Create edge arguments according to the IDL structure
+    // Create edge arguments with same source and target node
     const edgeArgs = {
       sourceNode: assetAddress, // Use the previously created node as source
       targetNode: assetAddress, // For testing, we'll use the same node as target
@@ -483,20 +483,23 @@ describe("tapestry", () => {
     );
 
     try {
-      const signature = await sendAndConfirmTx(rpc, tx, {
+      await sendAndConfirmTx(rpc, tx, {
         commitment: "confirmed",
       });
-      console.log(
-        "Self-referencing edge created: Transaction signature:",
-        signature
+      throw new Error(
+        "Expected transaction to fail with SelfReferenceNotAllowed error"
       );
-      console.log("Edge Address:", edgeAddress.toBase58());
     } catch (error) {
       if (error instanceof SendTransactionError) {
         const logs = await error.getLogs(rpc);
-        console.error("Transaction failed with logs:", logs);
+        expect(
+          logs.some((log) =>
+            log.includes("Self-referencing edges are not allowed")
+          )
+        ).toBe(true);
+      } else {
+        throw error;
       }
-      throw Error(error);
     }
   });
 
@@ -514,7 +517,7 @@ describe("tapestry", () => {
       program.programId
     );
 
-    const differentEdgeAddress = deriveAddress(edgeSeed, addressTree);
+    differentEdgeAddress = deriveAddress(edgeSeed, addressTree);
 
     // Get a fresh proof for the edge address
     const proof = await rpc.getValidityProofV0(undefined, [
@@ -688,19 +691,7 @@ describe("tapestry", () => {
       return matchingEdges;
     };
 
-    // Find edges from node1 to node1 (self-reference)
-    const selfEdges = findEdgesBetweenNodes(
-      assetAddress,
-      assetAddress,
-      allAccounts.items
-    );
-    expect(selfEdges.length).toBeGreaterThan(0);
-    if (selfEdges.length > 0) {
-      const firstEdge = selfEdges[0].edge;
-      expect(firstEdge.edgeType).toBe("test-connection");
-    }
-
-    // Find edges from node1 to node2
+    // Find edges from node1 to node2 (different nodes)
     const diffNodeEdges = findEdgesBetweenNodes(
       assetAddress,
       secondNodeAddress,
@@ -794,7 +785,7 @@ describe("tapestry", () => {
 
     // Verify the owner filter worked by checking the first node
     const firstNode = borsh.deserialize(
-      rawNodeSchema,
+      NodeSchemaV1,
       ownerNodes.items[0].data.data
     ) as any;
     expect(new PublicKey(firstNode.owner).toBase58()).toBe(
@@ -807,7 +798,7 @@ describe("tapestry", () => {
     const node = await rpc.getCompressedAccount(bn(assetAddress.toBytes()));
     expect(node.data.data.length).toBeGreaterThan(0);
 
-    const decodedNode = borsh.deserialize(rawNodeSchema, node.data.data) as any;
+    const decodedNode = borsh.deserialize(NodeSchemaV1, node.data.data) as any;
 
     expect(decodedNode.key).toBe(0);
     expect(new PublicKey(decodedNode.owner).toBase58()).toBe(
@@ -844,7 +835,9 @@ describe("tapestry", () => {
 
   it("can decode and validate edge data", async () => {
     // wait for indexing
-    const edge = await rpc.getCompressedAccount(bn(edgeAddress.toBytes()));
+    const edge = await rpc.getCompressedAccount(
+      bn(differentEdgeAddress.toBytes())
+    );
     const buffer = Buffer.from(edge.data.data);
     expect(buffer.length).toBeGreaterThan(0);
 
@@ -857,9 +850,9 @@ describe("tapestry", () => {
       assetAddress.toBase58()
     );
     expect(new PublicKey(decodedEdge.targetNode).toBase58()).toBe(
-      assetAddress.toBase58()
+      secondNodeAddress.toBase58()
     );
-    expect(decodedEdge.edgeType).toBe("test-connection");
+    expect(decodedEdge.edgeType).toBe("node-connection");
     expect(new PublicKey(decodedEdge.owner).toBase58()).toBe(
       OWNER_KEYPAIR.publicKey.toBase58()
     );
@@ -872,11 +865,12 @@ describe("tapestry", () => {
         decodedEdge.edgeData.propertiesBytes
       ) as any[];
 
-      expect(properties.length).toBe(2);
-      expect(properties[0].key).toBe("description");
-      expect(properties[0].value).toBe("This is a test edge");
-      expect(properties[1].key).toBe("type");
-      expect(properties[1].value).toBe("test");
+      expect(properties.length).toBe(3);
+      expect(properties[0].key).toBe("timestamp");
+      expect(properties[1].key).toBe("weight");
+      expect(properties[1].value).toBe("10");
+      expect(properties[2].key).toBe("directed");
+      expect(properties[2].value).toBe("true");
     }
   });
 });

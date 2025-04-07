@@ -24,4 +24,6 @@ pub enum ZkNftError {
     InvalidPluginIndex,
     #[msg("Invalid plugins to initialize")]
     InvalidPluginsToInitialize,
+    #[msg("Self-referencing edges are not allowed")]
+    SelfReferenceNotAllowed,
 }
