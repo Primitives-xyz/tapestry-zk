@@ -924,8 +924,375 @@ describe("tapestry", () => {
     expect(edge.data).toBeDefined();
     expect(edge.data.data).toBeDefined();
   });
+  it("can create and verify 5 nodes and 5 edges", async () => {
+    const addressTree = defaultTestStateTreeAccounts().addressTree;
+    const addressQueue = defaultTestStateTreeAccounts().addressQueue;
+    const merkleTree = defaultTestStateTreeAccounts().merkleTree;
 
-  it("compares performance between regular RPC and custom indexer", async () => {
+    // Create arrays to store node and edge addresses
+    const nodeAddresses: PublicKey[] = [];
+    const edgeAddresses: PublicKey[] = [];
+
+    // Create 5 nodes in parallel
+    const nodePromises = Array.from({ length: 5 }, async (_, i) => {
+      const randomBytes = anchor.web3.Keypair.generate().secretKey.slice(0, 32);
+      const accountKeyNode = Uint8Array.from([0]);
+
+      const assetSeed = deriveAddressSeed(
+        [accountKeyNode, randomBytes],
+        program.programId
+      );
+
+      const nodeAddress = deriveAddress(assetSeed, addressTree);
+      nodeAddresses.push(nodeAddress);
+
+      // Get a fresh proof for the node address
+      const proof = await rpc.getValidityProofV0(undefined, [
+        {
+          address: bn(nodeAddress.toBytes()),
+          tree: addressTree,
+          queue: addressQueue,
+        },
+      ]);
+
+      // Create the new address parameters
+      const newAddressParams: NewAddressParams = {
+        seed: assetSeed,
+        addressMerkleTreeRootIndex: proof.rootIndices[0],
+        addressMerkleTreePubkey: proof.merkleTrees[0],
+        addressQueuePubkey: proof.nullifierQueues[0],
+      };
+
+      // Create the output compressed accounts
+      const outputCompressedAccounts =
+        LightSystemProgram.createNewAddressOutputState(
+          Array.from(nodeAddress.toBytes()),
+          program.programId
+        );
+
+      const { remainingAccounts: _remainingAccounts } = packCompressedAccounts(
+        [],
+        [],
+        outputCompressedAccounts,
+        merkleTree
+      );
+      const { newAddressParamsPacked, remainingAccounts } =
+        packNewAddressParams([newAddressParams], _remainingAccounts);
+
+      // Create node arguments with unique properties
+      const nodeArgs = {
+        label: `node-${i + 1}`,
+        properties: [
+          {
+            key: "description",
+            value: `This is node ${i + 1}`,
+          },
+          {
+            key: "type",
+            value: "test",
+          },
+          {
+            key: "index",
+            value: i.toString(),
+          },
+        ],
+        isMutable: true,
+        creators: [
+          {
+            address: OWNER_KEYPAIR.publicKey,
+            verified: true,
+            share: 100,
+          },
+        ],
+      };
+
+      const {
+        accountCompressionAuthority,
+        noopProgram,
+        registeredProgramPda,
+        accountCompressionProgram,
+      } = defaultStaticAccountsStruct();
+
+      // Create the instruction
+      const ix = await program.methods
+        .createNode(
+          {
+            a: proof.compressedProof.a,
+            b: proof.compressedProof.b,
+            c: proof.compressedProof.c,
+          },
+          newAddressParamsPacked[0].addressMerkleTreeRootIndex,
+          Array.from(randomBytes),
+          nodeArgs
+        )
+        .accounts({
+          payer: NAME_KEYPAIR.publicKey,
+          updateAuthority: NAME_KEYPAIR.publicKey,
+          owner: OWNER_KEYPAIR.publicKey,
+          cpiAuthorityPda: PublicKey.findProgramAddressSync(
+            [Buffer.from("cpi_authority")],
+            program.programId
+          )[0],
+          selfProgram: program.programId,
+          lightSystemProgram: LightSystemProgram.programId,
+          accountCompressionAuthority,
+          accountCompressionProgram,
+          noopProgram,
+          registeredProgramPda,
+        })
+        .remainingAccounts(
+          remainingAccounts.map((account) => ({
+            pubkey: account,
+            isSigner: false,
+            isWritable: true,
+          }))
+        )
+        .instruction();
+
+      const blockhash = await rpc.getLatestBlockhash();
+
+      const tx = buildAndSignTx(
+        [setComputeUnitLimitIx, setComputeUnitPriceIx, ix],
+        NAME_KEYPAIR,
+        blockhash.blockhash
+      );
+
+      try {
+        const signature = await sendAndConfirmTx(rpc, tx, {
+          commitment: "confirmed",
+        });
+        return nodeAddress;
+      } catch (error) {
+        if (error instanceof SendTransactionError) {
+          const logs = await error.getLogs(rpc);
+          console.error("Transaction failed with logs:", logs);
+        }
+        throw Error(error);
+      }
+    });
+
+    // Wait for all nodes to be created
+    await Promise.all(nodePromises);
+
+    // Create 5 edges in parallel
+    const edgePromises = Array.from({ length: 5 }, async (_, i) => {
+      const randomBytes = anchor.web3.Keypair.generate().secretKey.slice(0, 32);
+      const accountKeyEdge = Uint8Array.from([1]);
+
+      const edgeSeed = deriveAddressSeed(
+        [accountKeyEdge, randomBytes],
+        program.programId
+      );
+
+      const edgeAddress = deriveAddress(edgeSeed, addressTree);
+      edgeAddresses.push(edgeAddress);
+
+      // Get a fresh proof for the edge address
+      const proof = await rpc.getValidityProofV0(undefined, [
+        {
+          address: bn(edgeAddress.toBytes()),
+          tree: addressTree,
+          queue: addressQueue,
+        },
+      ]);
+
+      // Create the new address parameters
+      const newAddressParams: NewAddressParams = {
+        seed: edgeSeed,
+        addressMerkleTreeRootIndex: proof.rootIndices[0],
+        addressMerkleTreePubkey: proof.merkleTrees[0],
+        addressQueuePubkey: proof.nullifierQueues[0],
+      };
+
+      // Create the output compressed accounts
+      const outputCompressedAccounts =
+        LightSystemProgram.createNewAddressOutputState(
+          Array.from(edgeAddress.toBytes()),
+          program.programId
+        );
+
+      const { remainingAccounts: _remainingAccounts } = packCompressedAccounts(
+        [],
+        [],
+        outputCompressedAccounts,
+        merkleTree
+      );
+      const { newAddressParamsPacked, remainingAccounts } =
+        packNewAddressParams([newAddressParams], _remainingAccounts);
+
+      // Create edge arguments connecting nodes in a chain
+      const sourceNode = nodeAddresses[i];
+      const targetNode = nodeAddresses[(i + 1) % 5]; // Connect to next node, or first node for last edge
+
+      const edgeArgs = {
+        sourceNode,
+        targetNode,
+        edgeType: "chain-connection",
+        properties: [
+          {
+            key: "timestamp",
+            value: Date.now().toString(),
+          },
+          {
+            key: "weight",
+            value: (i + 1).toString(),
+          },
+          {
+            key: "directed",
+            value: "true",
+          },
+        ],
+        isMutable: true,
+      };
+
+      const {
+        accountCompressionAuthority,
+        noopProgram,
+        registeredProgramPda,
+        accountCompressionProgram,
+      } = defaultStaticAccountsStruct();
+
+      // Create the instruction
+      const ix = await program.methods
+        .createEdge(
+          {
+            a: proof.compressedProof.a,
+            b: proof.compressedProof.b,
+            c: proof.compressedProof.c,
+          },
+          newAddressParamsPacked[0].addressMerkleTreeRootIndex,
+          Array.from(randomBytes),
+          edgeArgs
+        )
+        .accounts({
+          payer: NAME_KEYPAIR.publicKey,
+          updateAuthority: NAME_KEYPAIR.publicKey,
+          owner: OWNER_KEYPAIR.publicKey,
+          cpiAuthorityPda: PublicKey.findProgramAddressSync(
+            [Buffer.from("cpi_authority")],
+            program.programId
+          )[0],
+          selfProgram: program.programId,
+          lightSystemProgram: LightSystemProgram.programId,
+          accountCompressionAuthority,
+          accountCompressionProgram,
+          noopProgram,
+          registeredProgramPda,
+        })
+        .remainingAccounts(
+          remainingAccounts.map((account) => ({
+            pubkey: account,
+            isSigner: false,
+            isWritable: true,
+          }))
+        )
+        .instruction();
+
+      const blockhash = await rpc.getLatestBlockhash();
+
+      const tx = buildAndSignTx(
+        [setComputeUnitLimitIx, setComputeUnitPriceIx, ix],
+        NAME_KEYPAIR,
+        blockhash.blockhash
+      );
+
+      try {
+        const signature = await sendAndConfirmTx(rpc, tx, {
+          commitment: "confirmed",
+        });
+
+        return edgeAddress;
+      } catch (error) {
+        if (error instanceof SendTransactionError) {
+          const logs = await error.getLogs(rpc);
+          console.error("Transaction failed with logs:", logs);
+        }
+        throw Error(error);
+      }
+    });
+
+    // Wait for all edges to be created
+    await Promise.all(edgePromises);
+
+    // Verify all nodes and edges were created correctly
+    const allAccounts = await rpc.getCompressedAccountsByOwner(
+      program.programId,
+      {}
+    );
+
+    // Verify nodes in parallel
+    const nodeVerificationPromises = Array.from({ length: 5 }, async (_, i) => {
+      const node = await rpc.getCompressedAccount(
+        bn(nodeAddresses[i].toBytes())
+      );
+      const decodedNode = borsh.deserialize(
+        NodeSchemaV1,
+        node.data.data
+      ) as any;
+
+      expect(decodedNode.key).toBe(0);
+      expect(decodedNode.label).toBe(`node-${i + 1}`);
+      expect(decodedNode.isMutable).toBe(true);
+
+      // Verify properties
+      if (decodedNode.nodeData?.propertiesBytes) {
+        const properties = borsh.deserialize(
+          { array: { type: propertiesSchema } },
+          decodedNode.nodeData.propertiesBytes
+        ) as any[];
+
+        expect(properties).toHaveLength(3);
+        expect(properties[0].key).toBe("description");
+        expect(properties[1].key).toBe("type");
+        expect(properties[2].key).toBe("index");
+        expect(properties[2].value).toBe(i.toString());
+      }
+    });
+
+    // Verify edges in parallel
+    const edgeVerificationPromises = Array.from({ length: 5 }, async (_, i) => {
+      const edge = await rpc.getCompressedAccount(
+        bn(edgeAddresses[i].toBytes())
+      );
+      const decodedEdge = borsh.deserialize(
+        rawEdgeSchema,
+        edge.data.data
+      ) as any;
+
+      expect(decodedEdge.key).toBe(1);
+      expect(new PublicKey(decodedEdge.sourceNode).toBase58()).toBe(
+        nodeAddresses[i].toBase58()
+      );
+      expect(new PublicKey(decodedEdge.targetNode).toBase58()).toBe(
+        nodeAddresses[(i + 1) % 5].toBase58()
+      );
+      expect(decodedEdge.edgeType).toBe("chain-connection");
+      expect(decodedEdge.isMutable).toBe(true);
+
+      // Verify properties
+      if (decodedEdge.edgeData?.propertiesBytes) {
+        const properties = borsh.deserialize(
+          { array: { type: propertiesSchema } },
+          decodedEdge.edgeData.propertiesBytes
+        ) as any[];
+
+        expect(properties).toHaveLength(3);
+        expect(properties[0].key).toBe("timestamp");
+        expect(properties[1].key).toBe("weight");
+        expect(properties[1].value).toBe((i + 1).toString());
+        expect(properties[2].key).toBe("directed");
+        expect(properties[2].value).toBe("true");
+      }
+    });
+
+    // Wait for all verifications to complete
+    await Promise.all([
+      ...nodeVerificationPromises,
+      ...edgeVerificationPromises,
+    ]);
+  });
+
+  it("compares performance between regular RPC and custom indexer with many accounts", async () => {
     // Test regular RPC connection
     console.log("\nTesting regular RPC connection...");
     const rpcStartTime = Date.now();
@@ -988,5 +1355,203 @@ describe("tapestry", () => {
         )
       ).toBe(true);
     }
+  });
+
+  it("can fetch transaction with compression info", async () => {
+    const addressTree = defaultTestStateTreeAccounts().addressTree;
+    const addressQueue = defaultTestStateTreeAccounts().addressQueue;
+    const merkleTree = defaultTestStateTreeAccounts().merkleTree;
+
+    // Generate proper random bytes for node creation
+    const randomBytes = anchor.web3.Keypair.generate().secretKey.slice(0, 32);
+    const accountKeyNode = Uint8Array.from([0]);
+
+    const assetSeed = deriveAddressSeed(
+      [accountKeyNode, randomBytes],
+      program.programId
+    );
+
+    const nodeAddress = deriveAddress(assetSeed, addressTree);
+
+    // Get a fresh proof for the node address
+    const proof = await rpc.getValidityProofV0(undefined, [
+      {
+        address: bn(nodeAddress.toBytes()),
+        tree: addressTree,
+        queue: addressQueue,
+      },
+    ]);
+
+    // Create the new address parameters
+    const newAddressParams: NewAddressParams = {
+      seed: assetSeed,
+      addressMerkleTreeRootIndex: proof.rootIndices[0],
+      addressMerkleTreePubkey: proof.merkleTrees[0],
+      addressQueuePubkey: proof.nullifierQueues[0],
+    };
+
+    // Create the output compressed accounts
+    const outputCompressedAccounts =
+      LightSystemProgram.createNewAddressOutputState(
+        Array.from(nodeAddress.toBytes()),
+        program.programId
+      );
+
+    const { remainingAccounts: _remainingAccounts } = packCompressedAccounts(
+      [],
+      [],
+      outputCompressedAccounts,
+      merkleTree
+    );
+    const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
+      [newAddressParams],
+      _remainingAccounts
+    );
+
+    // Create node arguments
+    const nodeArgs = {
+      label: "compression-test-node",
+      properties: [
+        {
+          key: "description",
+          value: "Testing compression info",
+        },
+        {
+          key: "type",
+          value: "test",
+        },
+      ],
+      isMutable: true,
+      creators: [
+        {
+          address: OWNER_KEYPAIR.publicKey,
+          verified: true,
+          share: 100,
+        },
+      ],
+    };
+
+    const {
+      accountCompressionAuthority,
+      noopProgram,
+      registeredProgramPda,
+      accountCompressionProgram,
+    } = defaultStaticAccountsStruct();
+
+    // Create the instruction
+    const ix = await program.methods
+      .createNode(
+        {
+          a: proof.compressedProof.a,
+          b: proof.compressedProof.b,
+          c: proof.compressedProof.c,
+        },
+        newAddressParamsPacked[0].addressMerkleTreeRootIndex,
+        Array.from(randomBytes),
+        nodeArgs
+      )
+      .accounts({
+        payer: NAME_KEYPAIR.publicKey,
+        updateAuthority: NAME_KEYPAIR.publicKey,
+        owner: OWNER_KEYPAIR.publicKey,
+        cpiAuthorityPda: PublicKey.findProgramAddressSync(
+          [Buffer.from("cpi_authority")],
+          program.programId
+        )[0],
+        selfProgram: program.programId,
+        lightSystemProgram: LightSystemProgram.programId,
+        accountCompressionAuthority,
+        accountCompressionProgram,
+        noopProgram,
+        registeredProgramPda,
+      })
+      .remainingAccounts(
+        remainingAccounts.map((account) => ({
+          pubkey: account,
+          isSigner: false,
+          isWritable: true,
+        }))
+      )
+      .instruction();
+
+    const blockhash = await rpc.getLatestBlockhash();
+
+    const tx = buildAndSignTx(
+      [setComputeUnitLimitIx, setComputeUnitPriceIx, ix],
+      NAME_KEYPAIR,
+      blockhash.blockhash
+    );
+
+    let signature: string;
+    try {
+      signature = await sendAndConfirmTx(rpc, tx, {
+        commitment: "confirmed",
+      });
+      console.log("Transaction signature:", signature);
+    } catch (error) {
+      if (error instanceof SendTransactionError) {
+        const logs = await error.getLogs(rpc);
+        console.error("Transaction failed with logs:", logs);
+      }
+      throw Error(error);
+    }
+
+    // Wait a bit for indexing
+
+    // Now fetch and verify the transaction compression info
+    const txWithCompressionInfo = await rpc.getTransactionWithCompressionInfo(
+      signature
+    );
+    expect(txWithCompressionInfo).not.toBeNull();
+    // Verify compression info structure
+    expect(txWithCompressionInfo.compressionInfo).toBeDefined();
+    expect(txWithCompressionInfo.transaction).toBeDefined();
+
+    // Verify opened accounts (new node creation)
+    expect(txWithCompressionInfo.compressionInfo.openedAccounts).toBeDefined();
+    expect(
+      txWithCompressionInfo.compressionInfo.openedAccounts.length
+    ).toBeGreaterThan(0);
+
+    const openedAccount =
+      txWithCompressionInfo.compressionInfo.openedAccounts[0];
+    expect(openedAccount.account).toBeDefined();
+    expect(openedAccount.account.owner.toBase58()).toBe(
+      program.programId.toBase58()
+    );
+
+    // print owner
+    console.log("owner: ", openedAccount.account.owner.toBase58());
+    expect(openedAccount.account.leafIndex).toBeDefined();
+
+    // Verify the node data
+    const buffer = Buffer.from(openedAccount.account.data.data);
+    const decodedNode = borsh.deserialize(NodeSchemaV1, buffer) as any;
+    expect(decodedNode.label).toBe("compression-test-node");
+    expect(decodedNode.key).toBe(0); // NodeV1 key
+    expect(new PublicKey(decodedNode.owner).toBase58()).toBe(
+      OWNER_KEYPAIR.publicKey.toBase58()
+    );
+
+    // Verify properties
+    if (decodedNode.nodeData?.propertiesBytes) {
+      const properties = borsh.deserialize(
+        { array: { type: propertiesSchema } },
+        decodedNode.nodeData.propertiesBytes
+      ) as any[];
+
+      expect(properties).toHaveLength(2);
+      expect(properties[0].key).toBe("description");
+      expect(properties[0].value).toBe("Testing compression info");
+      expect(properties[1].key).toBe("type");
+      expect(properties[1].value).toBe("test");
+    }
+    console.log("signature: ", signature);
+    // Verify transaction data
+    expect(txWithCompressionInfo.transaction.transaction[0]).toBeDefined();
+    expect(txWithCompressionInfo.transaction.meta.err).toBeNull();
+    expect(txWithCompressionInfo.transaction.meta.status.ok).toBeDefined();
+    expect(txWithCompressionInfo.transaction.blockTime).toBeDefined();
+    expect(txWithCompressionInfo.transaction.slot).toBeDefined();
   });
 });

@@ -1,6 +1,6 @@
 solana program deploy target/deploy/tapestry.so \
   --program-id ../../keys/GraphU.json \
-  --keypair ../../keys/provider-wallet.json \
+  --keypair ../../keys/keypair.json \
   --fee-payer ../../keys/provider-wallet.json \
   --with-compute-unit-price 1000 \
   --use-rpc \
