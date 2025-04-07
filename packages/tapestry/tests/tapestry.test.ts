@@ -30,7 +30,12 @@ import {
   rawEdgeSchema,
 } from "../src";
 
-import { connection as rpc, PAYER_KEYPAIR, NAME_KEYPAIR } from "./common";
+import {
+  connection as rpc,
+  connectionWithCustomIndexer,
+  PAYER_KEYPAIR,
+  NAME_KEYPAIR,
+} from "./common";
 
 // Using PAYER_KEYPAIR from common.ts instead of loading it again
 const OWNER_KEYPAIR = PAYER_KEYPAIR;
@@ -871,6 +876,117 @@ describe("tapestry", () => {
       expect(properties[1].value).toBe("10");
       expect(properties[2].key).toBe("directed");
       expect(properties[2].value).toBe("true");
+    }
+  });
+
+  it("can fetch and decode edge data using custom indexer", async () => {
+    // wait for indexing
+    const edge = await connectionWithCustomIndexer.getCompressedAccount(
+      bn(differentEdgeAddress.toBytes())
+    );
+    const buffer = Buffer.from(edge.data.data);
+    expect(buffer.length).toBeGreaterThan(0);
+
+    // Decode the edge
+    const decodedEdge = borsh.deserialize(rawEdgeSchema, buffer) as any;
+
+    // Validate basic fields
+    expect(decodedEdge.key).toBe(1); // EdgeV1 key
+    expect(new PublicKey(decodedEdge.sourceNode).toBase58()).toBe(
+      assetAddress.toBase58()
+    );
+    expect(new PublicKey(decodedEdge.targetNode).toBase58()).toBe(
+      secondNodeAddress.toBase58()
+    );
+    expect(decodedEdge.edgeType).toBe("node-connection");
+    expect(new PublicKey(decodedEdge.owner).toBase58()).toBe(
+      OWNER_KEYPAIR.publicKey.toBase58()
+    );
+    expect(decodedEdge.isMutable).toBe(true);
+
+    // Validate properties
+    if (decodedEdge.edgeData?.propertiesBytes?.length > 0) {
+      const properties = borsh.deserialize(
+        { array: { type: propertiesSchema } },
+        decodedEdge.edgeData.propertiesBytes
+      ) as any[];
+
+      expect(properties.length).toBe(3);
+      expect(properties[0].key).toBe("timestamp");
+      expect(properties[1].key).toBe("weight");
+      expect(properties[1].value).toBe("10");
+      expect(properties[2].key).toBe("directed");
+      expect(properties[2].value).toBe("true");
+    }
+
+    // Additional validation specific to custom indexer
+    expect(edge.address).toBeDefined();
+    expect(edge.data).toBeDefined();
+    expect(edge.data.data).toBeDefined();
+  });
+
+  it("compares performance between regular RPC and custom indexer", async () => {
+    // Test regular RPC connection
+    console.log("\nTesting regular RPC connection...");
+    const rpcStartTime = Date.now();
+    const rpcAccounts = await rpc.getCompressedAccountsByOwner(
+      program.programId,
+      {}
+    );
+    const rpcEndTime = Date.now();
+    const rpcDuration = rpcEndTime - rpcStartTime;
+    console.log(
+      `Regular RPC took ${rpcDuration}ms to fetch ${rpcAccounts.items.length} accounts`
+    );
+
+    // Test custom indexer connection
+    console.log("\nTesting custom indexer connection...");
+    const indexerStartTime = Date.now();
+    const indexerAccounts =
+      await connectionWithCustomIndexer.getCompressedAccountsByOwner(
+        program.programId,
+        {}
+      );
+    const indexerEndTime = Date.now();
+    const indexerDuration = indexerEndTime - indexerStartTime;
+    console.log(
+      `Custom indexer took ${indexerDuration}ms to fetch ${indexerAccounts.items.length} accounts`
+    );
+
+    // Compare results
+    console.log("\nPerformance comparison:");
+    console.log(
+      `Regular RPC: ${rpcDuration}ms (${rpcAccounts.items.length} accounts)`
+    );
+    console.log(
+      `Custom Indexer: ${indexerDuration}ms (${indexerAccounts.items.length} accounts)`
+    );
+    console.log(
+      `Speed improvement: ${(
+        ((rpcDuration - indexerDuration) / rpcDuration) *
+        100
+      ).toFixed(2)}%`
+    );
+
+    // Verify we got the same number of accounts
+    expect(indexerAccounts.items.length).toBe(rpcAccounts.items.length);
+
+    // Verify the data is consistent by checking a few accounts
+    const sampleSize = Math.min(5, rpcAccounts.items.length);
+    for (let i = 0; i < sampleSize; i++) {
+      const rpcAccount = rpcAccounts.items[i];
+      const indexerAccount = indexerAccounts.items[i];
+
+      // Compare addresses by converting to base58 strings
+      expect(new PublicKey(rpcAccount.address).toBase58()).toBe(
+        new PublicKey(indexerAccount.address).toBase58()
+      );
+      // Compare data content
+      expect(
+        Buffer.from(rpcAccount.data.data).equals(
+          Buffer.from(indexerAccount.data.data)
+        )
+      ).toBe(true);
     }
   });
 });
