@@ -16,4 +16,7 @@ export {
   edgeArgsSchema,
   propertiesSchema,
   creatorSchema,
+  nodeDataSchema,
+  rawNodeSchema,
+  rawEdgeSchema,
 } from "./schemas";

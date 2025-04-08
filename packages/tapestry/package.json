@@ -11,7 +11,7 @@
     "lint:fix": "prettier */*.js \"*/**/*{.js,.ts}\" -w",
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check",
     "start:local": "rm -rf test-ledger && light test-validator",
-    "airdrop:local": "solana airdrop 1000 --keypair ../../keys/provider-wallet.json -u http://localhost:8899",
+    "airdrop:local": "solana airdrop 1000 --keypair ../../keys/provider-wallet.json -u http://localhost:8899 && solana airdrop 1000 --keypair ../../keys/test/owner-wallet.json -u http://localhost:8899",
     "deploy:local": "anchor deploy --program-name tapestry --provider.cluster http://localhost:8899  --program-keypair ../../keys/GraphU.json  --provider.wallet ../../keys/provider-wallet.json ",
     "extend": "solana program extend GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh 19000 -u $MAINNET_RPC -k ../../keys/authority-keypair.json",
     "extend:local": "solana program extend GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh 30000 -u http://localhost:8899 -k ../../keys/authority-keypair.json",

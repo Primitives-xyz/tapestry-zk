@@ -20,6 +20,7 @@ export const NAME_KEYPAIR = anchor.web3.Keypair.fromSecretKey(
 export const RPC_ENDPOINT = "http://127.0.0.1:8899";
 export const COMPRESS_RPC_ENDPOINT = "http://127.0.0.1:8784";
 export const PROVER_ENDPOINT = "http://127.0.0.1:3001";
+export const CUSTOM_COMPRESS_RPC_ENDPOINT = "http://127.0.0.1:8784";
 // Create connection
 export const connection = createRpc(
   RPC_ENDPOINT,
@@ -28,4 +29,11 @@ export const connection = createRpc(
   {
     commitment: "confirmed",
   }
+);
+
+export const connectionWithCustomIndexer = createRpc(
+  RPC_ENDPOINT,
+  CUSTOM_COMPRESS_RPC_ENDPOINT,
+  PROVER_ENDPOINT,
+  { commitment: "confirmed" }
 );

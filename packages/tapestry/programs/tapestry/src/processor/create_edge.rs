@@ -1,4 +1,5 @@
 use crate::constants::CPI_AUTHORITY_SEED;
+use crate::errors::ZkNftError;
 use crate::state::{AccountKey, EdgeArgs, EdgeData, EdgeV1, NodeUpdateAuthority};
 use crate::utils::validate_merkle_trees;
 use crate::utils::{get_account_seed, new_compressed_account};
@@ -25,6 +26,11 @@ pub fn create_edge<'info>(
         address_queue_pubkey_index: 2,
     };
     validate_merkle_trees(0, Some(1), Some(2), None, ctx.remaining_accounts)?;
+
+    // Validate that source and target nodes are different
+    if edge_args.source_node == edge_args.target_node {
+        return Err(error!(ZkNftError::SelfReferenceNotAllowed));
+    }
 
     // Create the edge data from properties
     let edge_data = EdgeData::new(&edge_args.properties);
