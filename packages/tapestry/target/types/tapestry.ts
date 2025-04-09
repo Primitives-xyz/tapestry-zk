@@ -225,19 +225,12 @@ export type Tapestry = {
             "docs": [
               "The source node of the edge"
             ],
-            "type": "publicKey"
+            "type": "string"
           },
           {
             "name": "targetNode",
             "docs": [
               "The target node of the edge"
-            ],
-            "type": "publicKey"
-          },
-          {
-            "name": "edgeType",
-            "docs": [
-              "The type of relationship this edge represents"
             ],
             "type": "string"
           },
@@ -625,19 +618,12 @@ export const IDL: Tapestry = {
             "docs": [
               "The source node of the edge"
             ],
-            "type": "publicKey"
+            "type": "string"
           },
           {
             "name": "targetNode",
             "docs": [
               "The target node of the edge"
-            ],
-            "type": "publicKey"
-          },
-          {
-            "name": "edgeType",
-            "docs": [
-              "The type of relationship this edge represents"
             ],
             "type": "string"
           },

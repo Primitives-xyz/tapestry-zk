@@ -10,11 +10,9 @@ use light_utils::hash_to_bn254_field_size_be;
 #[derive(AnchorSerialize, AnchorDeserialize, PartialEq, Eq, Debug, Clone)]
 pub struct EdgeArgs {
     /// The source node of the edge
-    pub source_node: Pubkey,
+    pub source_node: String,
     /// The target node of the edge
-    pub target_node: Pubkey,
-    /// The type of relationship this edge represents
-    pub edge_type: String,
+    pub target_node: String,
     /// Properties of the edge
     pub properties: Vec<Properties>,
     /// Whether or not the edge is mutable
@@ -56,10 +54,9 @@ impl AsByteVec for EdgeData {
 pub struct EdgeV1 {
     pub key: AccountKey,
     #[truncate]
-    pub source_node: Pubkey,
+    pub source_node: String,
     #[truncate]
-    pub target_node: Pubkey,
-    pub edge_type: String,
+    pub target_node: String,
     pub edge_data: EdgeData,
     pub is_mutable: bool,
     pub owner: Pubkey,

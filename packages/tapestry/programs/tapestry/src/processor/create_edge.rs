@@ -40,7 +40,6 @@ pub fn create_edge<'info>(
         key: AccountKey::EdgeV1,
         source_node: edge_args.source_node,
         target_node: edge_args.target_node,
-        edge_type: edge_args.edge_type,
         edge_data,
         is_mutable: edge_args.is_mutable,
         owner: ctx.accounts.owner.key(),

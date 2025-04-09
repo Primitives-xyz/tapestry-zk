@@ -15,5 +15,6 @@ export const getZkNftProgram = (rpc: Rpc) => {
     { commitment: "confirmed" }
   );
   const program = new Program<Tapestry>(idl as any, PROGRAM_ID, provider);
+
   return program;
 };
