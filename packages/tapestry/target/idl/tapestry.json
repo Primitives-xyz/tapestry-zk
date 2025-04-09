@@ -225,19 +225,12 @@
             "docs": [
               "The source node of the edge"
             ],
-            "type": "publicKey"
+            "type": "string"
           },
           {
             "name": "targetNode",
             "docs": [
               "The target node of the edge"
-            ],
-            "type": "publicKey"
-          },
-          {
-            "name": "edgeType",
-            "docs": [
-              "The type of relationship this edge represents"
             ],
             "type": "string"
           },
@@ -395,5 +388,8 @@
       "name": "SelfReferenceNotAllowed",
       "msg": "Self-referencing edges are not allowed"
     }
-  ]
+  ],
+  "metadata": {
+    "address": "GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh"
+  }
 }

@@ -78,9 +78,8 @@ export const nodeArgsSchema: borsh.Schema = {
 
 export const edgeArgsSchema: borsh.Schema = {
   struct: {
-    sourceNode: { array: { type: "u8", len: 32 } },
-    targetNode: { array: { type: "u8", len: 32 } },
-    edgeType: "string",
+    sourceNode: "string",
+    targetNode: "string",
     properties: { array: { type: propertiesSchema } },
     isMutable: "bool",
   },
@@ -127,7 +126,6 @@ export const edgeSchemaV1: borsh.Schema = {
     updateAuthority: { array: { type: "u8", len: 32 } },
     sourceNode: { array: { type: "u8", len: 32 } },
     targetNode: { array: { type: "u8", len: 32 } },
-    edgeType: "string",
     properties: { array: { type: propertiesSchema } },
     isMutable: "bool",
     initializedPlugins: "u16",
@@ -185,9 +183,8 @@ export const rawNodeSchema: borsh.Schema = {
 export const rawEdgeSchema: borsh.Schema = {
   struct: {
     key: "u8", // AccountKey (1 for EdgeV1)
-    sourceNode: { array: { type: "u8", len: 32 } }, // Full 32-byte source node Pubkey
-    targetNode: { array: { type: "u8", len: 32 } }, // Full 32-byte target node Pubkey
-    edgeType: "string", // Borsh handles u32 len + bytes
+    sourceNode: "string", // Source node identifier
+    targetNode: "string", // Target node identifier
     // Properties are serialized in the edgeData field
     edgeData: {
       struct: {

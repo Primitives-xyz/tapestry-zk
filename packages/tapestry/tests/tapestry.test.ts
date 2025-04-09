@@ -420,9 +420,8 @@ describe("tapestry", () => {
 
     // Create edge arguments with same source and target node
     const edgeArgs = {
-      sourceNode: assetAddress, // Use the previously created node as source
-      targetNode: assetAddress, // For testing, we'll use the same node as target
-      edgeType: "test-connection",
+      sourceNode: "node-1", // Use the previously created node as source
+      targetNode: "node-1", // For testing, we'll use the same node as target
       properties: [
         {
           key: "description",
@@ -561,9 +560,8 @@ describe("tapestry", () => {
 
     // Create edge arguments with different source and target nodes
     const edgeArgs = {
-      sourceNode: assetAddress, // First node
-      targetNode: secondNodeAddress, // Second node
-      edgeType: "node-connection",
+      sourceNode: "node-1", // First node
+      targetNode: "node-2", // Second node
       properties: [
         {
           key: "timestamp",
@@ -660,8 +658,8 @@ describe("tapestry", () => {
 
     // Function to check if an edge connects specific nodes
     const findEdgesBetweenNodes = (
-      sourceNode: PublicKey,
-      targetNode: PublicKey,
+      sourceNode: string,
+      targetNode: string,
       accounts: any[]
     ) => {
       const matchingEdges = [];
@@ -673,13 +671,11 @@ describe("tapestry", () => {
         if (data[0] === 1) {
           try {
             const edge = borsh.deserialize(rawEdgeSchema, data) as any;
-            const edgeSourceNode = new PublicKey(edge.sourceNode);
-            const edgeTargetNode = new PublicKey(edge.targetNode);
 
             // Check if it connects the specified nodes
             if (
-              edgeSourceNode.equals(sourceNode) &&
-              edgeTargetNode.equals(targetNode)
+              edge.sourceNode === sourceNode &&
+              edge.targetNode === targetNode
             ) {
               matchingEdges.push({
                 address: item.address,
@@ -698,15 +694,13 @@ describe("tapestry", () => {
 
     // Find edges from node1 to node2 (different nodes)
     const diffNodeEdges = findEdgesBetweenNodes(
-      assetAddress,
-      secondNodeAddress,
+      "node-1",
+      "node-2",
       allAccounts.items
     );
     expect(diffNodeEdges.length).toBeGreaterThan(0);
     if (diffNodeEdges.length > 0) {
       const edge = diffNodeEdges[0].edge;
-      expect(edge.edgeType).toBe("node-connection");
-
       // Check properties
       if (edge.edgeData?.propertiesBytes?.length > 0) {
         const properties = borsh.deserialize(
@@ -851,13 +845,8 @@ describe("tapestry", () => {
 
     // Validate basic fields
     expect(decodedEdge.key).toBe(1); // EdgeV1 key
-    expect(new PublicKey(decodedEdge.sourceNode).toBase58()).toBe(
-      assetAddress.toBase58()
-    );
-    expect(new PublicKey(decodedEdge.targetNode).toBase58()).toBe(
-      secondNodeAddress.toBase58()
-    );
-    expect(decodedEdge.edgeType).toBe("node-connection");
+    expect(decodedEdge.sourceNode).toBe("node-1");
+    expect(decodedEdge.targetNode).toBe("node-2");
     expect(new PublicKey(decodedEdge.owner).toBase58()).toBe(
       OWNER_KEYPAIR.publicKey.toBase58()
     );
@@ -892,13 +881,8 @@ describe("tapestry", () => {
 
     // Validate basic fields
     expect(decodedEdge.key).toBe(1); // EdgeV1 key
-    expect(new PublicKey(decodedEdge.sourceNode).toBase58()).toBe(
-      assetAddress.toBase58()
-    );
-    expect(new PublicKey(decodedEdge.targetNode).toBase58()).toBe(
-      secondNodeAddress.toBase58()
-    );
-    expect(decodedEdge.edgeType).toBe("node-connection");
+    expect(decodedEdge.sourceNode).toBe("node-1");
+    expect(decodedEdge.targetNode).toBe("node-2");
     expect(new PublicKey(decodedEdge.owner).toBase58()).toBe(
       OWNER_KEYPAIR.publicKey.toBase58()
     );
@@ -1125,9 +1109,8 @@ describe("tapestry", () => {
       const targetNode = nodeAddresses[(i + 1) % 5]; // Connect to next node, or first node for last edge
 
       const edgeArgs = {
-        sourceNode,
-        targetNode,
-        edgeType: "chain-connection",
+        sourceNode: `node-${i + 1}`,
+        targetNode: `node-${((i + 1) % 5) + 1}`,
         properties: [
           {
             key: "timestamp",
@@ -1260,13 +1243,8 @@ describe("tapestry", () => {
       ) as any;
 
       expect(decodedEdge.key).toBe(1);
-      expect(new PublicKey(decodedEdge.sourceNode).toBase58()).toBe(
-        nodeAddresses[i].toBase58()
-      );
-      expect(new PublicKey(decodedEdge.targetNode).toBase58()).toBe(
-        nodeAddresses[(i + 1) % 5].toBase58()
-      );
-      expect(decodedEdge.edgeType).toBe("chain-connection");
+      expect(decodedEdge.sourceNode).toBe(`node-${i + 1}`);
+      expect(decodedEdge.targetNode).toBe(`node-${((i + 1) % 5) + 1}`);
       expect(decodedEdge.isMutable).toBe(true);
 
       // Verify properties
