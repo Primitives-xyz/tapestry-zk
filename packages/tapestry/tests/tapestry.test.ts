@@ -523,8 +523,6 @@ describe("tapestry", () => {
 
     differentEdgeAddress = deriveAddress(edgeSeed, addressTree);
 
-    console.log("Different Edge Address:", differentEdgeAddress.toBase58());
-
     // Get a fresh proof for the edge address
     const proof = await rpc.getValidityProofV0(undefined, [
       {
@@ -631,8 +629,6 @@ describe("tapestry", () => {
       NAME_KEYPAIR,
       blockhash.blockhash
     );
-
-    console.log("NAMEPAIR:", NAME_KEYPAIR.publicKey.toBase58());
 
     try {
       const signature = await sendAndConfirmTx(rpc, tx, {
@@ -839,11 +835,9 @@ describe("tapestry", () => {
 
   it("can decode and validate edge data", async () => {
     // wait for indexing
-    console.log("Different Edge Address:", differentEdgeAddress.toBase58());
     const edge = await rpc.getCompressedAccount(
       bn(differentEdgeAddress.toBytes())
     );
-    console.log("Edge data:", edge);
     const buffer = Buffer.from(edge.data.data);
     expect(buffer.length).toBeGreaterThan(0);
 
@@ -875,7 +869,7 @@ describe("tapestry", () => {
     }
   });
 
-  it.skip("can fetch and decode edge data using custom indexer", async () => {
+  it("can fetch and decode edge data using custom indexer", async () => {
     // wait for indexing
     const edge = await connectionWithCustomIndexer.getCompressedAccount(
       bn(differentEdgeAddress.toBytes())
