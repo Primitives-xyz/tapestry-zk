@@ -45,6 +45,7 @@ where
         address_queue_account_index: address_merkle_context.address_queue_pubkey_index,
         address_merkle_tree_root_index,
     };
+
     Ok((compressed_account, new_address_params))
 }
 

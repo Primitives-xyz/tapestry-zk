@@ -63,6 +63,7 @@ pub fn create_edge<'info>(
 
     let bump = ctx.bumps.cpi_authority_pda;
     let signer_seeds = [CPI_AUTHORITY_SEED.as_bytes(), &[bump]];
+
     // Create account
     let cpi_inputs = create_cpi_inputs_for_new_account(
         CompressedProof {
