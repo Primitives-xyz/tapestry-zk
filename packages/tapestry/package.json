@@ -21,7 +21,7 @@
     "close-buffers": "solana program close --buffers -u $MAINNET_RPC -k ../../keys/authority-keypair.json",
     "idl:init": "anchor idl init -f target/idl/tapestry.json GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh --provider.wallet ../../keys/provider-wallet.json --provider.cluster https://devnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83",
     "idl": "anchor idl upgrade -f target/idl/tapestry.json GraphUyqhPmEAckWzi7zAvbvUTXf8kqX7JtuvdGYRDRh --provider.wallet ../../keys/provider-wallet.json --provider.cluster https://devnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83",
-    "test:local": "bun run generate-wallets && bun start:local && bun run airdrop:local && bun build:program && bun deploy:local && bun test"
+    "test:local": "bun run generate-wallets && bun start:local && bun run airdrop:local && bun run build:program && bun build:program && bun deploy:local && bun test"
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.29.0",

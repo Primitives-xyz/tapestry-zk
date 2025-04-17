@@ -26,6 +26,23 @@ pub fn new_compressed_account<T>(
 where
     T: BorshSerialize + DataHasher + Discriminator,
 {
+    msg!("compressing");
+    // Add this before calling the function
+    msg!(
+        "About to call serialize_and_hash_account with address_seed: {:?}",
+        address_seed
+    );
+    msg!("program_id: {:?}", program_id);
+    msg!("address_merkle_context: {:?}", address_merkle_context);
+    msg!("remaining_accounts: {:?}", remaining_accounts);
+
+    // Print size information about the account instead
+    let account_data_size = match account.try_to_vec() {
+        Ok(vec) => vec.len(),
+        Err(_) => 0,
+    };
+    msg!("account data size: {} bytes", account_data_size);
+
     let compressed_account = serialize_and_hash_account(
         account,
         address_seed,
@@ -33,19 +50,20 @@ where
         address_merkle_context,
         remaining_accounts,
     )?;
+    msg!("compressed");
 
     let compressed_account = OutputCompressedAccountWithPackedContext {
         compressed_account,
         merkle_tree_index: merkle_output_context.merkle_tree_pubkey_index,
     };
-
+    msg!("output compressed account");
     let new_address_params = NewAddressParamsPacked {
         seed: *address_seed,
         address_merkle_tree_account_index: address_merkle_context.address_merkle_tree_pubkey_index,
         address_queue_account_index: address_merkle_context.address_queue_pubkey_index,
         address_merkle_tree_root_index,
     };
-
+    msg!("new address params");
     Ok((compressed_account, new_address_params))
 }
 

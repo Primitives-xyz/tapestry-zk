@@ -51,6 +51,7 @@ pub fn create_edge<'info>(
     };
 
     let edge_seed = get_account_seed(AccountKey::EdgeV1, &random_bytes);
+    msg!("BALL_EDGE_SEED: {:?}", edge_seed);
     let (edge_compressed_account, edge_new_address_params) = new_compressed_account(
         &edge,
         &edge_seed,
@@ -60,10 +61,13 @@ pub fn create_edge<'info>(
         address_merkle_tree_root_index,
         ctx.remaining_accounts,
     )?;
+    msg!(
+        "BALL_EDGE_COMPRESSED_ACCOUNT: {:?}",
+        edge_compressed_account
+    );
 
     let bump = ctx.bumps.cpi_authority_pda;
     let signer_seeds = [CPI_AUTHORITY_SEED.as_bytes(), &[bump]];
-
     // Create account
     let cpi_inputs = create_cpi_inputs_for_new_account(
         CompressedProof {
