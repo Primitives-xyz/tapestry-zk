@@ -633,6 +633,7 @@ describe("tapestry", () => {
     try {
       const signature = await sendAndConfirmTx(rpc, tx, {
         commitment: "confirmed",
+        skipPreflight: true,
       });
       console.log(
         "Different nodes edge created: Transaction signature:",

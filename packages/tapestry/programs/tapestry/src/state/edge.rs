@@ -59,6 +59,7 @@ pub struct EdgeV1 {
     pub target_node: String,
     pub edge_data: EdgeData,
     pub is_mutable: bool,
+    #[truncate] // add this flag here
     pub owner: Pubkey,
     pub update_authority: UpdateAuthority,
     pub initialized_plugins: u16,
