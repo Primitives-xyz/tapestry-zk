@@ -34,11 +34,11 @@ import {
 
 // Define devnet RPC endpoint
 const DEVNET_RPC_ENDPOINT =
-  "https://devnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
+  "https://mainnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
 const DEVNET_COMPRESS_RPC_ENDPOINT =
-  "https://devnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
+  "https://mainnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
 const DEVNET_PROVER_ENDPOINT =
-  "https://devnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
+  "https://mainnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
 
 // Create devnet connection
 const devnetConnection = createRpc(
@@ -50,14 +50,7 @@ const devnetConnection = createRpc(
   }
 );
 
-// Load keypairs from files
 const PAYER_KEYPAIR = anchor.web3.Keypair.fromSecretKey(
-  Uint8Array.from(
-    JSON.parse(fs.readFileSync("../../keys/test/payer.json", "utf-8"))
-  )
-);
-
-const NAME_KEYPAIR = anchor.web3.Keypair.fromSecretKey(
   Uint8Array.from(
     JSON.parse(
       fs.readFileSync("../../keys/signer_graphu_keypair.json", "utf-8")
@@ -90,7 +83,7 @@ describe("tapestry devnet", () => {
     PROGRAM_ID,
     new anchor.AnchorProvider(
       devnetConnection,
-      new anchor.Wallet(NAME_KEYPAIR),
+      new anchor.Wallet(PAYER_KEYPAIR),
       {
         commitment: "confirmed",
       }
@@ -102,7 +95,7 @@ describe("tapestry devnet", () => {
 
     const txSig = await createAccount(
       devnetConnection,
-      NAME_KEYPAIR,
+      PAYER_KEYPAIR,
       [seed],
       program.programId,
       undefined,
@@ -206,8 +199,8 @@ describe("tapestry devnet", () => {
         nodeArgs
       )
       .accounts({
-        payer: NAME_KEYPAIR.publicKey,
-        updateAuthority: NAME_KEYPAIR.publicKey,
+        payer: PAYER_KEYPAIR.publicKey,
+        updateAuthority: PAYER_KEYPAIR.publicKey,
         owner: OWNER_KEYPAIR.publicKey,
         cpiAuthorityPda: PublicKey.findProgramAddressSync(
           [Buffer.from("cpi_authority")],
@@ -233,7 +226,7 @@ describe("tapestry devnet", () => {
 
     const tx = buildAndSignTx(
       [setComputeUnitLimitIx, setComputeUnitPriceIx, ix],
-      NAME_KEYPAIR,
+      PAYER_KEYPAIR,
       blockhash.blockhash
     );
 
