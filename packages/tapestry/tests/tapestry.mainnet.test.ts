@@ -32,7 +32,7 @@ import {
   rawEdgeSchema,
 } from "../src";
 
-// Define devnet RPC endpoint
+// Define mainnet RPC endpoint
 const DEVNET_RPC_ENDPOINT =
   "https://mainnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
 const DEVNET_COMPRESS_RPC_ENDPOINT =
@@ -40,7 +40,7 @@ const DEVNET_COMPRESS_RPC_ENDPOINT =
 const DEVNET_PROVER_ENDPOINT =
   "https://mainnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
 
-// Create devnet connection
+// Create mainnet connection
 const devnetConnection = createRpc(
   DEVNET_RPC_ENDPOINT,
   DEVNET_COMPRESS_RPC_ENDPOINT,
@@ -76,8 +76,8 @@ let edgeAddress: PublicKey;
 let secondNodeAddress: PublicKey; // For testing different source/target
 let differentEdgeAddress: PublicKey; // For testing different nodes edge
 
-describe("tapestry devnet", () => {
-  // Configure the client to use the devnet cluster.
+describe("tapestry mainnet", () => {
+  // Configure the client to use the mainnet cluster.
   const program = new Program<Tapestry>(
     idl as any,
     PROGRAM_ID,
@@ -90,7 +90,7 @@ describe("tapestry devnet", () => {
     )
   );
 
-  it("Can create compressed account on devnet", async () => {
+  it("Can create compressed account on mainnet", async () => {
     const seed = Keypair.generate().publicKey.toBytes();
 
     const txSig = await createAccount(
@@ -102,10 +102,10 @@ describe("tapestry devnet", () => {
       undefined,
       defaultTestStateTreeAccounts().merkleTree
     );
-    console.log("Compressed account created on devnet:", txSig);
+    console.log("Compressed account created on mainnet:", txSig);
   });
 
-  it("Can create node on devnet", async () => {
+  it("Can create node on mainnet", async () => {
     const addressTree = defaultTestStateTreeAccounts().addressTree;
     const addressQueue = defaultTestStateTreeAccounts().addressQueue;
     const merkleTree = defaultTestStateTreeAccounts().merkleTree;
@@ -158,11 +158,11 @@ describe("tapestry devnet", () => {
 
     // Create node arguments according to the IDL structure
     const nodeArgs = {
-      label: "devnet-test-node",
+      label: "mainnet-test-node",
       properties: [
         {
           key: "description",
-          value: "This is a test node on devnet",
+          value: "This is a test node on mainnet",
         },
         {
           key: "type",
@@ -246,7 +246,7 @@ describe("tapestry devnet", () => {
     }
   });
 
-  it("can fetch nodes by program ID on devnet", async () => {
+  it("can fetch nodes by program ID on mainnet", async () => {
     // Get all nodes for the program
     const nodes = await devnetConnection.getCompressedAccountsByOwner(
       program.programId,
@@ -276,7 +276,7 @@ describe("tapestry devnet", () => {
     expect(nodes.items.length).toBeGreaterThan(0);
   });
 
-  it("can fetch and decode specific node on devnet", async () => {
+  it("can fetch and decode specific node on mainnet", async () => {
     // wait longer for indexing
     const node = await devnetConnection.getCompressedAccount(
       bn(assetAddress.toBytes())
@@ -289,7 +289,7 @@ describe("tapestry devnet", () => {
     expect(new PublicKey(decodedNode.owner).toBase58()).toBe(
       OWNER_KEYPAIR.publicKey.toBase58()
     );
-    expect(decodedNode.label).toBe("devnet-test-node");
+    expect(decodedNode.label).toBe("mainnet-test-node");
     expect(decodedNode.isMutable).toBe(true);
 
     if (decodedNode.nodeData?.propertiesBytes) {
