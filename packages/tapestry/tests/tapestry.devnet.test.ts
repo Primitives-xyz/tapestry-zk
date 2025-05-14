@@ -34,11 +34,11 @@ import {
 
 // Define devnet RPC endpoint
 const DEVNET_RPC_ENDPOINT =
-  "https://devnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
+  "https://mainnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
 const DEVNET_COMPRESS_RPC_ENDPOINT =
-  "https://devnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
+  "https://mainnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
 const DEVNET_PROVER_ENDPOINT =
-  "https://devnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
+  "https://mainnet.helius-rpc.com/?api-key=f30d6a96-5fa2-4318-b2da-0f6d1deb5c83";
 
 // Create devnet connection
 const devnetConnection = createRpc(
@@ -59,7 +59,9 @@ const PAYER_KEYPAIR = anchor.web3.Keypair.fromSecretKey(
 
 const NAME_KEYPAIR = anchor.web3.Keypair.fromSecretKey(
   Uint8Array.from(
-    JSON.parse(fs.readFileSync("../../keys/provider-wallet.json", "utf-8"))
+    JSON.parse(
+      fs.readFileSync("../../keys/signer_graphu_keypair.json", "utf-8")
+    )
   )
 );
 
