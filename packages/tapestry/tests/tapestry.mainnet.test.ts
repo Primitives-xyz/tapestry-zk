@@ -15,6 +15,9 @@ import {
   sendAndConfirmTx,
   deriveAddressSeed,
   createRpc,
+  addressTree as aT,
+  addressQueue as aq,
+  merkletreePubkey,
 } from "@lightprotocol/stateless.js";
 //@ts-expect-error
 import { describe, it, expect } from "bun:test";
@@ -31,6 +34,10 @@ import {
   rawNodeSchema as NodeSchemaV1,
   rawEdgeSchema,
 } from "../src";
+
+import { setupZKCompression } from "./zkCompression";
+import { createZKConnection } from "./zkConnection";
+import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 
 // Define mainnet RPC endpoint
 const DEVNET_RPC_ENDPOINT =
@@ -49,6 +56,13 @@ const devnetConnection = createRpc(
     commitment: "confirmed",
   }
 );
+
+const zkConfig = {
+  rpcUrl: DEVNET_RPC_ENDPOINT,
+  compressRpcEndpoint: DEVNET_COMPRESS_RPC_ENDPOINT,
+  proverEndpoint: DEVNET_PROVER_ENDPOINT,
+  commitment: "confirmed" as const,
+};
 
 const PAYER_KEYPAIR = anchor.web3.Keypair.fromSecretKey(
   Uint8Array.from(
@@ -237,6 +251,411 @@ describe("tapestry mainnet", () => {
       console.log("Transaction signature:", signature);
       console.log("Asset Address:", assetAddress.toBase58());
       console.log("Owner:", OWNER_KEYPAIR.publicKey.toBase58());
+    } catch (error) {
+      if (error instanceof SendTransactionError) {
+        const logs = await error.getLogs(devnetConnection);
+        console.error("Transaction failed with logs:", logs);
+      }
+      throw Error(error);
+    }
+  });
+
+  it("Can create a second node for edge testing on mainnet", async () => {
+    const addressTree = defaultTestStateTreeAccounts().addressTree;
+    const addressQueue = defaultTestStateTreeAccounts().addressQueue;
+    const merkleTree = defaultTestStateTreeAccounts().merkleTree;
+
+    // Generate proper random bytes for node creation
+    const randomBytes = anchor.web3.Keypair.generate().secretKey.slice(0, 32);
+    const accountKeyNode = Uint8Array.from([0]);
+
+    const assetSeed = deriveAddressSeed(
+      [accountKeyNode, randomBytes],
+      program.programId
+    );
+
+    secondNodeAddress = deriveAddress(assetSeed, addressTree);
+
+    // Get a fresh proof for the node address
+    const proof = await devnetConnection.getValidityProofV0(undefined, [
+      {
+        address: bn(secondNodeAddress.toBytes()),
+        tree: addressTree,
+        queue: addressQueue,
+      },
+    ]);
+
+    // Create the new address parameters
+    const newAddressParams: NewAddressParams = {
+      seed: assetSeed,
+      addressMerkleTreeRootIndex: proof.rootIndices[0],
+      addressMerkleTreePubkey: proof.merkleTrees[0],
+      addressQueuePubkey: proof.nullifierQueues[0],
+    };
+
+    // Create the output compressed accounts
+    const outputCompressedAccounts =
+      LightSystemProgram.createNewAddressOutputState(
+        Array.from(secondNodeAddress.toBytes()),
+        program.programId
+      );
+
+    const { remainingAccounts: _remainingAccounts } = packCompressedAccounts(
+      [],
+      [],
+      outputCompressedAccounts,
+      merkleTree
+    );
+    const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
+      [newAddressParams],
+      _remainingAccounts
+    );
+
+    // Create node arguments according to the IDL structure
+    const nodeArgs = {
+      label: "second-mainnet-test-node",
+      properties: [
+        {
+          key: "description",
+          value: "Second test node for edge testing on mainnet",
+        },
+        {
+          key: "type",
+          value: "test",
+        },
+      ],
+      isMutable: true,
+      creators: [
+        {
+          address: OWNER_KEYPAIR.publicKey,
+          verified: true,
+          share: 100,
+        },
+      ],
+    };
+
+    const {
+      accountCompressionAuthority,
+      noopProgram,
+      registeredProgramPda,
+      accountCompressionProgram,
+    } = defaultStaticAccountsStruct();
+
+    // Create the instruction with the correct parameters
+    const ix = await program.methods
+      .createNode(
+        {
+          a: proof.compressedProof.a,
+          b: proof.compressedProof.b,
+          c: proof.compressedProof.c,
+        },
+        newAddressParamsPacked[0].addressMerkleTreeRootIndex,
+        Array.from(randomBytes),
+        nodeArgs
+      )
+      .accounts({
+        payer: PAYER_KEYPAIR.publicKey,
+        updateAuthority: PAYER_KEYPAIR.publicKey,
+        owner: OWNER_KEYPAIR.publicKey,
+        cpiAuthorityPda: PublicKey.findProgramAddressSync(
+          [Buffer.from("cpi_authority")],
+          program.programId
+        )[0],
+        selfProgram: program.programId,
+        lightSystemProgram: LightSystemProgram.programId,
+        accountCompressionAuthority,
+        accountCompressionProgram,
+        noopProgram,
+        registeredProgramPda,
+      })
+      .remainingAccounts(
+        remainingAccounts.map((account) => ({
+          pubkey: account,
+          isSigner: false,
+          isWritable: true,
+        }))
+      )
+      .instruction();
+
+    const blockhash = await devnetConnection.getLatestBlockhash();
+
+    const tx = buildAndSignTx(
+      [setComputeUnitLimitIx, setComputeUnitPriceIx, ix],
+      PAYER_KEYPAIR,
+      blockhash.blockhash
+    );
+
+    try {
+      const signature = await sendAndConfirmTx(devnetConnection, tx, {
+        commitment: "confirmed",
+      });
+      console.log("Transaction signature:", signature);
+      console.log("Second Node Address:", secondNodeAddress.toBase58());
+    } catch (error) {
+      if (error instanceof SendTransactionError) {
+        const logs = await error.getLogs(devnetConnection);
+        console.error("Transaction failed with logs:", logs);
+      }
+      throw Error(error);
+    }
+  });
+
+  it("Can create edge between different nodes on mainnet", async () => {
+    const addressTree = defaultTestStateTreeAccounts().addressTree;
+    const addressQueue = defaultTestStateTreeAccounts().addressQueue;
+    const merkleTree = defaultTestStateTreeAccounts().merkleTree;
+
+    // Generate random bytes for edge creation
+    const randomBytes = anchor.web3.Keypair.generate().secretKey.slice(0, 32);
+    const accountKeyEdge = Uint8Array.from([1]); // EdgeV1 key
+
+    const edgeSeed = deriveAddressSeed(
+      [accountKeyEdge, randomBytes],
+      program.programId
+    );
+
+    differentEdgeAddress = deriveAddress(edgeSeed, addressTree);
+
+    // Get a fresh proof for the edge address
+    const proof = await devnetConnection.getValidityProofV0(undefined, [
+      {
+        address: bn(differentEdgeAddress.toBytes()),
+        tree: addressTree,
+        queue: addressQueue,
+      },
+    ]);
+
+    // Create the new address parameters
+    const newAddressParams: NewAddressParams = {
+      seed: edgeSeed,
+      addressMerkleTreeRootIndex: proof.rootIndices[0],
+      addressMerkleTreePubkey: proof.merkleTrees[0],
+      addressQueuePubkey: proof.nullifierQueues[0],
+    };
+
+    // Create the output compressed accounts
+    const outputCompressedAccounts =
+      LightSystemProgram.createNewAddressOutputState(
+        Array.from(differentEdgeAddress.toBytes()),
+        program.programId
+      );
+
+    const { remainingAccounts: _remainingAccounts } = packCompressedAccounts(
+      [],
+      [],
+      outputCompressedAccounts,
+      merkleTree
+    );
+    const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
+      [newAddressParams],
+      _remainingAccounts
+    );
+
+    // Create edge arguments with different source and target nodes
+    const edgeArgs = {
+      sourceNode: assetAddress.toBase58(),
+      targetNode: secondNodeAddress.toBase58(),
+      properties: [
+        { key: "timestamp", value: Date.now().toString() },
+        { key: "weight", value: "10" },
+        { key: "directed", value: "true" },
+      ],
+      isMutable: true,
+    };
+
+    const {
+      accountCompressionAuthority,
+      noopProgram,
+      registeredProgramPda,
+      accountCompressionProgram,
+    } = defaultStaticAccountsStruct();
+
+    // Create the instruction with the correct parameters
+    const ix = await program.methods
+      .createEdge(
+        {
+          a: proof.compressedProof.a,
+          b: proof.compressedProof.b,
+          c: proof.compressedProof.c,
+        },
+        newAddressParamsPacked[0].addressMerkleTreeRootIndex,
+        Array.from(randomBytes),
+        edgeArgs
+      )
+      .accounts({
+        payer: PAYER_KEYPAIR.publicKey,
+        updateAuthority: PAYER_KEYPAIR.publicKey,
+        owner: OWNER_KEYPAIR.publicKey,
+        cpiAuthorityPda: PublicKey.findProgramAddressSync(
+          [Buffer.from("cpi_authority")],
+          program.programId
+        )[0],
+        selfProgram: program.programId,
+        lightSystemProgram: LightSystemProgram.programId,
+        accountCompressionAuthority,
+        accountCompressionProgram,
+        noopProgram,
+        registeredProgramPda,
+      })
+      .remainingAccounts(
+        remainingAccounts.map((account) => ({
+          pubkey: account,
+          isSigner: false,
+          isWritable: true,
+        }))
+      )
+      .instruction();
+
+    const blockhash = await devnetConnection.getLatestBlockhash();
+
+    const tx = buildAndSignTx(
+      [setComputeUnitLimitIx, setComputeUnitPriceIx, ix],
+      PAYER_KEYPAIR,
+      blockhash.blockhash
+    );
+
+    try {
+      const signature = await sendAndConfirmTx(devnetConnection, tx, {
+        commitment: "confirmed",
+      });
+      console.log("Edge created between nodes on mainnet. Signature:", signature);
+      console.log("Edge Address:", differentEdgeAddress.toBase58());
+    } catch (error) {
+      if (error instanceof SendTransactionError) {
+        const logs = await error.getLogs(devnetConnection);
+        console.error("Transaction failed with logs:", logs);
+      }
+      throw Error(error);
+    }
+  });
+
+  it("Can create edge between two ZK-compressed nodes using setupZKCompression on mainnet", async () => {
+    // Setup first node (source)
+    const umi = createUmi(DEVNET_RPC_ENDPOINT); // Replace with actual Umi instance if needed
+    const sourceNodeSetup = await setupZKCompression(umi, program);
+    const sourceNodeAddress = sourceNodeSetup.assetAddress;
+
+    // Setup second node (target)
+    const targetNodeSetup = await setupZKCompression(umi, program);
+    const targetNodeAddress = targetNodeSetup.assetAddress;
+
+    // Now create an edge between these two nodes
+    // Generate random bytes for edge creation
+    const randomBytes = anchor.web3.Keypair.generate().secretKey.slice(0, 32);
+    const accountKeyEdge = Uint8Array.from([1]); // EdgeV1 key
+
+    const edgeSeed = deriveAddressSeed(
+      [accountKeyEdge, randomBytes],
+      program.programId
+    );
+
+    const addressTree = new PublicKey(aT);
+    const addressQueue = new PublicKey(aq);
+    const merkleTree = new PublicKey(merkletreePubkey);
+    const edgeAddress = deriveAddress(edgeSeed, addressTree);
+
+    const zkConnection = createZKConnection(zkConfig);
+    const proof = await zkConnection.getValidityProofV0(undefined, [
+      {
+        address: bn(edgeAddress.toBytes()),
+        tree: addressTree,
+        queue: addressQueue,
+      },
+    ]);
+
+    const newAddressParams: NewAddressParams = {
+      seed: edgeSeed,
+      addressMerkleTreeRootIndex: proof.rootIndices[0],
+      addressMerkleTreePubkey: proof.merkleTrees[0],
+      addressQueuePubkey: proof.nullifierQueues[0],
+    };
+
+    const outputCompressedAccounts =
+      LightSystemProgram.createNewAddressOutputState(
+        Array.from(edgeAddress.toBytes()),
+        program.programId
+      );
+
+    const { remainingAccounts: _remainingAccounts } = packCompressedAccounts(
+      [],
+      [],
+      outputCompressedAccounts,
+      merkleTree
+    );
+    const { newAddressParamsPacked, remainingAccounts } = packNewAddressParams(
+      [newAddressParams],
+      _remainingAccounts
+    );
+
+    // Create edge arguments with different source and target nodes
+    const edgeArgs = {
+      sourceNode: sourceNodeAddress.toBase58(),
+      targetNode: targetNodeAddress.toBase58(),
+      properties: [
+        { key: "timestamp", value: Date.now().toString() },
+        { key: "weight", value: "10" },
+        { key: "directed", value: "true" },
+      ],
+      isMutable: true,
+    };
+
+    const {
+      accountCompressionAuthority,
+      noopProgram,
+      registeredProgramPda,
+      accountCompressionProgram,
+    } = defaultStaticAccountsStruct();
+
+    // Create the instruction with the correct parameters
+    const ix = await program.methods
+      .createEdge(
+        {
+          a: proof.compressedProof.a,
+          b: proof.compressedProof.b,
+          c: proof.compressedProof.c,
+        },
+        newAddressParamsPacked[0].addressMerkleTreeRootIndex,
+        Array.from(randomBytes),
+        edgeArgs
+      )
+      .accounts({
+        payer: PAYER_KEYPAIR.publicKey,
+        updateAuthority: PAYER_KEYPAIR.publicKey,
+        owner: OWNER_KEYPAIR.publicKey,
+        cpiAuthorityPda: PublicKey.findProgramAddressSync(
+          [Buffer.from("cpi_authority")],
+          program.programId
+        )[0],
+        selfProgram: program.programId,
+        lightSystemProgram: LightSystemProgram.programId,
+        accountCompressionAuthority,
+        accountCompressionProgram,
+        noopProgram,
+        registeredProgramPda,
+      })
+      .remainingAccounts(
+        remainingAccounts.map((account) => ({
+          pubkey: account,
+          isSigner: false,
+          isWritable: true,
+        }))
+      )
+      .instruction();
+
+    const blockhash = await devnetConnection.getLatestBlockhash();
+
+    const tx = buildAndSignTx(
+      [setComputeUnitLimitIx, setComputeUnitPriceIx, ix],
+      PAYER_KEYPAIR,
+      blockhash.blockhash
+    );
+
+    try {
+      const signature = await sendAndConfirmTx(devnetConnection, tx, {
+        commitment: "confirmed",
+      });
+      console.log("Edge created between ZK-compressed nodes on mainnet. Signature:", signature);
+      console.log("Edge Address:", edgeAddress.toBase58());
     } catch (error) {
       if (error instanceof SendTransactionError) {
         const logs = await error.getLogs(devnetConnection);

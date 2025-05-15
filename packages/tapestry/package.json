@@ -25,9 +25,12 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "0.29.0",
+    "@metaplex-foundation/umi": "^1.2.0",
+    "@metaplex-foundation/umi-bundle-defaults": "^1.2.0",
     "@solana/web3.js": "^1.94.0",
     "borsh": "^2.0.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "umi": "^4.4.11"
   },
   "devDependencies": {
     "@lightprotocol/stateless.js": "^0.20.9",
