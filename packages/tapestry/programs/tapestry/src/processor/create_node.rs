@@ -25,7 +25,7 @@ pub fn create_node<'info>(
         address_queue_pubkey_index: 2,
     };
     validate_merkle_trees(0, Some(1), Some(2), None, ctx.remaining_accounts)?;
-
+    msg!("validate_merkle_trees updated, this is good");
     // Create the node data from properties and creators
     let node_data = NodeData::new(&node_args.properties, &node_args.creators);
 

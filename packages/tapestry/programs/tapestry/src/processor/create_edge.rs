@@ -25,6 +25,7 @@ pub fn create_edge<'info>(
         address_merkle_tree_pubkey_index: 1,
         address_queue_pubkey_index: 2,
     };
+    // msg!("proof at start of create_edge: {:?}", proof);
     validate_merkle_trees(0, Some(1), Some(2), None, ctx.remaining_accounts)?;
 
     // Validate that source and target nodes are different
@@ -64,6 +65,7 @@ pub fn create_edge<'info>(
     let bump = ctx.bumps.cpi_authority_pda;
     let signer_seeds = [CPI_AUTHORITY_SEED.as_bytes(), &[bump]];
 
+    // msg!("proof: {:?}", proof);
     // Create account
     let cpi_inputs = create_cpi_inputs_for_new_account(
         CompressedProof {
@@ -75,6 +77,7 @@ pub fn create_edge<'info>(
         edge_compressed_account,
         None,
     );
+    // msg!("cpi_inputs: {:?}", cpi_inputs);
 
     verify(&ctx, &cpi_inputs, &[&signer_seeds])?;
 

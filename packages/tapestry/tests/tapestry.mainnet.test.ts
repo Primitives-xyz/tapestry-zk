@@ -1,43 +1,42 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Tapestry } from "../target/types/tapestry";
 import {
-  LightSystemProgram,
-  NewAddressParams,
+  addressQueue as aq,
+  addressTree as aT,
   bn,
   buildAndSignTx,
   createAccount,
+  createRpc,
   defaultStaticAccountsStruct,
   defaultTestStateTreeAccounts,
   deriveAddress,
+  deriveAddressSeed,
+  LightSystemProgram,
+  merkletreePubkey,
+  NewAddressParams,
   packCompressedAccounts,
   packNewAddressParams,
   sendAndConfirmTx,
-  deriveAddressSeed,
-  createRpc,
-  addressTree as aT,
-  addressQueue as aq,
-  merkletreePubkey,
 } from "@lightprotocol/stateless.js";
+import { Tapestry } from "../target/types/tapestry";
 //@ts-expect-error
-import { describe, it, expect } from "bun:test";
 import { Keypair, PublicKey, SendTransactionError } from "@solana/web3.js";
-import idl from "../target/idl/tapestry.json";
 import * as borsh from "borsh";
+import { describe, expect, it } from "bun:test";
 import fs from "fs";
+import idl from "../target/idl/tapestry.json";
 
 import "dotenv/config";
 import {
+  creatorSchema,
   PROGRAM_ID,
   propertiesSchema,
-  creatorSchema,
   rawNodeSchema as NodeSchemaV1,
-  rawEdgeSchema,
 } from "../src";
 
+import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { setupZKCompression } from "./zkCompression";
 import { createZKConnection } from "./zkConnection";
-import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 
 // Define mainnet RPC endpoint
 const DEVNET_RPC_ENDPOINT =
@@ -518,7 +517,10 @@ describe("tapestry mainnet", () => {
       const signature = await sendAndConfirmTx(devnetConnection, tx, {
         commitment: "confirmed",
       });
-      console.log("Edge created between nodes on mainnet. Signature:", signature);
+      console.log(
+        "Edge created between nodes on mainnet. Signature:",
+        signature
+      );
       console.log("Edge Address:", differentEdgeAddress.toBase58());
     } catch (error) {
       if (error instanceof SendTransactionError) {
@@ -654,7 +656,10 @@ describe("tapestry mainnet", () => {
       const signature = await sendAndConfirmTx(devnetConnection, tx, {
         commitment: "confirmed",
       });
-      console.log("Edge created between ZK-compressed nodes on mainnet. Signature:", signature);
+      console.log(
+        "Edge created between ZK-compressed nodes on mainnet. Signature:",
+        signature
+      );
       console.log("Edge Address:", edgeAddress.toBase58());
     } catch (error) {
       if (error instanceof SendTransactionError) {

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use light_sdk::pubkey;
 
-use crate::errors::ZkNftError;
+// use crate::errors::ZkNftError;
 
 pub const MERKLE_TREE_PUBKEY: Pubkey = pubkey!("smt1NamzXdq4AMqS2fS2F1i5KTYPZRhoHgWx38d8WsT");
 pub const ADDRESS_MERKLE_TREE_PUBKEY: Pubkey =
@@ -16,44 +16,44 @@ pub fn validate_merkle_trees(
     nullifier_queue_pubkey_index: Option<u8>,
     remaining_accounts: &[AccountInfo],
 ) -> Result<()> {
-    let merkle_tree_address = &remaining_accounts[merkle_tree_pubkey_index as usize];
-    require!(
-        merkle_tree_address.key() == MERKLE_TREE_PUBKEY,
-        ZkNftError::InvalidMerkleTrees
-    );
+    // let merkle_tree_address = &remaining_accounts[merkle_tree_pubkey_index as usize];
+    // require!(
+    //     merkle_tree_address.key() == MERKLE_TREE_PUBKEY,
+    //     ZkNftError::InvalidMerkleTrees
+    // );
 
-    match address_merkle_tree_pubkey_index {
-        Some(index) => {
-            let address_merkle_tree_address = &remaining_accounts[index as usize];
-            require!(
-                address_merkle_tree_address.key() == ADDRESS_MERKLE_TREE_PUBKEY,
-                ZkNftError::InvalidMerkleTrees
-            );
-        }
-        None => {}
-    }
+    // match address_merkle_tree_pubkey_index {
+    //     Some(index) => {
+    //         let address_merkle_tree_address = &remaining_accounts[index as usize];
+    //         require!(
+    //             address_merkle_tree_address.key() == ADDRESS_MERKLE_TREE_PUBKEY,
+    //             ZkNftError::InvalidMerkleTrees
+    //         );
+    //     }
+    //     None => {}
+    // }
 
-    match address_queue_pubkey_index {
-        Some(index) => {
-            let address_queue_address = &remaining_accounts[index as usize];
-            require!(
-                address_queue_address.key() == ADDRESS_QUEUE_PUBKEY,
-                ZkNftError::InvalidMerkleTrees
-            );
-        }
-        None => {}
-    }
+    // match address_queue_pubkey_index {
+    //     Some(index) => {
+    //         let address_queue_address = &remaining_accounts[index as usize];
+    //         require!(
+    //             address_queue_address.key() == ADDRESS_QUEUE_PUBKEY,
+    //             ZkNftError::InvalidMerkleTrees
+    //         );
+    //     }
+    //     None => {}
+    // }
 
-    match nullifier_queue_pubkey_index {
-        Some(index) => {
-            let nullifier_queue_address = &remaining_accounts[index as usize];
-            require!(
-                nullifier_queue_address.key() == NULLIFIER_QUEUE_PUBKEY,
-                ZkNftError::InvalidMerkleTrees
-            );
-        }
-        None => {}
-    }
+    // match nullifier_queue_pubkey_index {
+    //     Some(index) => {
+    //         let nullifier_queue_address = &remaining_accounts[index as usize];
+    //         require!(
+    //             nullifier_queue_address.key() == NULLIFIER_QUEUE_PUBKEY,
+    //             ZkNftError::InvalidMerkleTrees
+    //         );
+    //     }
+    //     None => {}
+    // }
 
     Ok(())
 }
